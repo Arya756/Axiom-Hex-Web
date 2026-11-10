@@ -1,0 +1,10 @@
+<!-- Meridian Flow: Hero illustration placeholder (licensed asset, expires 2026-11-24) -->
+<!-- In production: replace with actual licensed Shutterstock image -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img"
+     aria-label="Hero illustration: connected workflows — licensed asset, expires 2026-11-24">
+  <title>Hero illustration: connected workflows</title>
+  <rect width="800" height="400" fill="#F5F5F5"/>
+  <text x="400" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#1A3C5E" font-weight="700">Connected Workflows</text>
+  <text x="400" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#616161">[Licensed placeholder — Shutterstock Standard License]</text>
+  <text x="400" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#616161">Expires: 2026-11-24</text>
+</svg>

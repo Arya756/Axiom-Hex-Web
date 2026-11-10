@@ -56,6 +56,7 @@ jobs:
 
       - name: Run tests
         env:
+          PYTHONPATH: .
           DATABASE_URL: postgresql+psycopg://axiom_app:axiom_secret@localhost:5432/axiom
           ADMIN_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/axiom
           JWT_SECRET: ci-secret-test-key

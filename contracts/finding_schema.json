@@ -1,0 +1,309 @@
+{
+  "$defs": {
+    "DisclosureRecord": {
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/Method"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "external_call": {
+          "default": false,
+          "title": "External Call",
+          "type": "boolean"
+        },
+        "data_categories": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Categories",
+          "type": "array"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/Sensitivity"
+        },
+        "tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tokens"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latency Ms"
+        }
+      },
+      "required": [
+        "method",
+        "sensitivity"
+      ],
+      "title": "DisclosureRecord",
+      "type": "object"
+    },
+    "Evidence": {
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "current_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Version"
+        },
+        "current_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Value"
+        },
+        "effective": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective"
+        }
+      },
+      "required": [
+        "source",
+        "version",
+        "status"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "FindingSeverity": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "FindingSeverity",
+      "type": "string"
+    },
+    "FindingStatus": {
+      "enum": [
+        "open",
+        "accepted",
+        "rejected",
+        "overridden",
+        "disputed"
+      ],
+      "title": "FindingStatus",
+      "type": "string"
+    },
+    "FindingType": {
+      "enum": [
+        "outdated",
+        "contradicted",
+        "unsupported",
+        "terminology",
+        "tone",
+        "accessibility",
+        "visual"
+      ],
+      "title": "FindingType",
+      "type": "string"
+    },
+    "Method": {
+      "enum": [
+        "deterministic_lookup",
+        "hybrid_retrieval",
+        "llm_assisted",
+        "ocr",
+        "wcag_contrast",
+        "ciede2000"
+      ],
+      "title": "Method",
+      "type": "string"
+    },
+    "Sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "restricted"
+      ],
+      "title": "Sensitivity",
+      "type": "string"
+    },
+    "SuggestedFix": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "edit_budget": {
+          "default": "minimal",
+          "title": "Edit Budget",
+          "type": "string"
+        },
+        "rechecked": {
+          "default": false,
+          "title": "Rechecked",
+          "type": "boolean"
+        },
+        "intent_similarity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Similarity"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "SuggestedFix",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "finding_id": {
+      "title": "Finding Id",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/FindingType"
+    },
+    "severity": {
+      "$ref": "#/$defs/FindingSeverity"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "span": {
+      "additionalProperties": true,
+      "title": "Span",
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "explanation": {
+      "title": "Explanation",
+      "type": "string"
+    },
+    "suggested_fix": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SuggestedFix"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "route_to": {
+      "title": "Route To",
+      "type": "string"
+    },
+    "disclosure": {
+      "$ref": "#/$defs/DisclosureRecord"
+    },
+    "status": {
+      "$ref": "#/$defs/FindingStatus",
+      "default": "open"
+    }
+  },
+  "required": [
+    "finding_id",
+    "type",
+    "severity",
+    "confidence",
+    "span",
+    "explanation",
+    "route_to",
+    "disclosure"
+  ],
+  "title": "Finding",
+  "type": "object"
+}

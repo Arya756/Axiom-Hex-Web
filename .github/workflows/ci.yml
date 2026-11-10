@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: axiom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r api/requirements.txt
+
+      - name: Initialize PostgreSQL database
+        run: |
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -d axiom -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d axiom -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'axiom_app') THEN CREATE ROLE axiom_app WITH LOGIN PASSWORD 'axiom_secret'; END IF; END \$\$;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d axiom -c "GRANT CONNECT ON DATABASE axiom TO axiom_app; GRANT USAGE ON SCHEMA public TO axiom_app; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO axiom_app; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO axiom_app;"
+
+      - name: Run Alembic migrations
+        env:
+          ADMIN_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/axiom
+          DATABASE_URL: postgresql+psycopg://axiom_app:axiom_secret@localhost:5432/axiom
+        run: |
+          cd api && alembic upgrade head
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+psycopg://axiom_app:axiom_secret@localhost:5432/axiom
+          ADMIN_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/axiom
+          JWT_SECRET: ci-secret-test-key
+        run: |
+          pytest -v
+

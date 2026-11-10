@@ -47,6 +47,7 @@ def upgrade() -> None:
         "tenants",
         sa.Column("id", sa.String(64), primary_key=True),
         sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("ruleset_version", sa.Integer, default=1, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
 

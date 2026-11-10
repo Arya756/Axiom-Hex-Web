@@ -202,6 +202,37 @@
       "title": "Sensitivity",
       "type": "string"
     },
+    "Span": {
+      "description": "Exact text span locating a finding in a ContentUnit (T2, T3).",
+      "properties": {
+        "unit_id": {
+          "title": "Unit Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit_id",
+        "start",
+        "end",
+        "quote"
+      ],
+      "title": "Span",
+      "type": "object"
+    },
     "SuggestedFix": {
       "properties": {
         "text": {
@@ -256,9 +287,7 @@
       "type": "number"
     },
     "span": {
-      "additionalProperties": true,
-      "title": "Span",
-      "type": "object"
+      "$ref": "#/$defs/Span"
     },
     "evidence": {
       "items": {
@@ -292,6 +321,23 @@
     "status": {
       "$ref": "#/$defs/FindingStatus",
       "default": "open"
+    },
+    "abstained": {
+      "default": false,
+      "title": "Abstained",
+      "type": "boolean"
+    },
+    "rule_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rule Id"
     }
   },
   "required": [

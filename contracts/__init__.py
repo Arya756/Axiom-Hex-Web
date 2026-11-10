@@ -2,6 +2,7 @@
 
 from contracts.models import (
     BBox,
+    CompileResult,
     ContentUnit,
     DisclosureRecord,
     Evidence,
@@ -15,12 +16,15 @@ from contracts.models import (
     RunProgress,
     RunNodeStatus,
     Sensitivity,
+    SourceVersion,
+    Span,
     SuggestedFix,
 )
-from contracts.stub_engine import recheck_fix, run_review
+from contracts.stub_engine import compile, recheck_fix, run_review
 
 __all__ = [
     "BBox",
+    "CompileResult",
     "ContentUnit",
     "DisclosureRecord",
     "Evidence",
@@ -34,7 +38,10 @@ __all__ = [
     "RunProgress",
     "RunNodeStatus",
     "Sensitivity",
+    "SourceVersion",
+    "Span",
     "SuggestedFix",
+    "compile",
     "recheck_fix",
     "run_review",
 ]

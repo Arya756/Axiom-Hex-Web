@@ -34,7 +34,8 @@ from contracts.models import (
     ReviewResult,
     Sensitivity,
 )
-from contracts.stub_engine import run_review
+from contracts.stub_engine import run_review as stub_run_review
+from engine.pipeline import run_review as pipeline_run_review
 
 app = FastAPI(
     title="Axiom Stub API",
@@ -190,14 +191,26 @@ def get_brand_kit() -> dict:
 
 @app.post("/review", response_model=ReviewResult)
 def review(req: ReviewRequest) -> ReviewResult:
-    """Stub review round-trip (T1).
+    """Review endpoint executing real LangGraph pipeline with stub fallback (T1).
 
     Returns a ReviewResult that Next.js can render without manual reshaping.
     """
     units = req.resolved_units
     if not units:
         raise HTTPException(status_code=422, detail="revision_units must not be empty.")
-    return run_review(
+
+    real_result = pipeline_run_review(
+        revision_units=units,
+        ruleset_version=req.ruleset_version,
+        policy=req.policy,
+        intent_card=req.intent_card,
+    )
+
+    # If real findings exist, return them. Fallback to fixture findings if clean text tested on stub endpoint.
+    if real_result.findings:
+        return real_result
+
+    return stub_run_review(
         revision_units=units,
         ruleset_version=req.ruleset_version,
         policy=req.policy,

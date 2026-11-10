@@ -97,10 +97,27 @@ class ContentUnit(BaseModel):
     alt_text: Optional[str] = None
     source_map: Optional[Dict[str, Any]] = None
 
+    @property
+    def offsets(self) -> List[int]:
+        """Char offsets as [start, end] for T2 compatibility."""
+        return [self.start, self.end]
+
 
 # ---------------------------------------------------------------------------
-# Evidence / SuggestedFix / Disclosure (T3)
+# Evidence / SuggestedFix / Disclosure / Span (T3)
 # ---------------------------------------------------------------------------
+
+
+class Span(BaseModel):
+    """Exact text span locating a finding in a ContentUnit (T2, T3)."""
+
+    unit_id: str
+    start: int = Field(..., ge=0)
+    end: int = Field(..., ge=0)
+    quote: str
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
 
 
 class Evidence(BaseModel):
@@ -141,13 +158,15 @@ class Finding(BaseModel):
     type: FindingType
     severity: FindingSeverity
     confidence: float = Field(..., ge=0.0, le=1.0)
-    span: Dict[str, Any]  # {unit_id, start, end, quote}
+    span: Span  # exact span locating quote in ContentUnit
     evidence: List[Evidence] = Field(default_factory=list)
     explanation: str
     suggested_fix: Optional[SuggestedFix] = None
     route_to: str  # role queue, e.g. "legal_reviewer"
     disclosure: DisclosureRecord
     status: FindingStatus = FindingStatus.open
+    abstained: bool = False  # T8 Radar input (abstain signal)
+    rule_id: Optional[str] = None  # T8 Radar input (source rule ID)
 
 
 # ---------------------------------------------------------------------------
@@ -185,3 +204,28 @@ class IntentCard(BaseModel):
     audience: str
     key_message: str
     cta: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Compile Hook Models (T5 / T8)
+# ---------------------------------------------------------------------------
+
+
+class SourceVersion(BaseModel):
+    """A source or fact version to be compiled into the Knowledge Base (T5)."""
+
+    source_id: str  # e.g. "F-112", "R-01"
+    version: int = Field(..., ge=1)
+    kind: str = "rule"  # "rule" | "fact" | "glossary" | "palette"
+    body: str
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class CompileResult(BaseModel):
+    """Result returned by the guideline compiler on source/version create (T5, T8)."""
+
+    source_id: str
+    version: int
+    embedding: List[float] = Field(..., description="384-d vector for BAAI/bge-small-en-v1.5")
+    lint_flags: List[str] = Field(default_factory=list)
+    collisions: List[str] = Field(default_factory=list)

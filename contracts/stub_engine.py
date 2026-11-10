@@ -7,9 +7,10 @@ Used by Yash's platform before the real engine (Issue #4) is built.
 from __future__ import annotations
 
 import uuid
-from typing import Any, List
+from typing import Any, List, Optional
 
 from contracts.models import (
+    CompileResult,
     ContentUnit,
     DisclosureRecord,
     Evidence,
@@ -17,11 +18,14 @@ from contracts.models import (
     FindingSeverity,
     FindingStatus,
     FindingType,
+    IntentCard,
     Method,
     ReviewResult,
     RunProgress,
     RunNodeStatus,
     Sensitivity,
+    SourceVersion,
+    Span,
     SuggestedFix,
 )
 
@@ -33,12 +37,12 @@ def _fixture_finding(unit: ContentUnit, revision_id: str) -> Finding:
         type=FindingType.terminology,
         severity=FindingSeverity.medium,
         confidence=0.9,
-        span={
-            "unit_id": unit.unit_id,
-            "start": unit.start,
-            "end": unit.end,
-            "quote": unit.text[:60],
-        },
+        span=Span(
+            unit_id=unit.unit_id,
+            start=unit.start,
+            end=unit.end,
+            quote=unit.text[:60],
+        ),
         evidence=[
             Evidence(
                 source="R-01",
@@ -69,6 +73,8 @@ def _fixture_finding(unit: ContentUnit, revision_id: str) -> Finding:
             latency_ms=1,
         ),
         status=FindingStatus.open,
+        abstained=False,
+        rule_id="R-01",
     )
 
 
@@ -76,12 +82,10 @@ def run_review(
     revision_units: List[ContentUnit],
     ruleset_version: int,
     session: Any = None,
-    policy: Any = None,
-    intent_card: Any = None,
+    policy: Optional[Sensitivity] = None,
+    intent_card: Optional[IntentCard] = None,
 ) -> ReviewResult:
     """Stub engine entrypoint (T1). Returns fixture findings for every unit."""
-    from typing import Any as _Any
-
     findings: List[Finding] = [_fixture_finding(u, u.revision_id) for u in revision_units]
 
     progress = [
@@ -93,7 +97,7 @@ def run_review(
     return ReviewResult(
         revision_id=revision_units[0].revision_id if revision_units else "rev_stub",
         ruleset_version=ruleset_version,
-        sensitivity=Sensitivity.internal,
+        sensitivity=policy or Sensitivity.internal,
         findings=findings,
         matched_sources=["R-01"],
         run_progress=progress,
@@ -106,3 +110,17 @@ def run_review(
 def recheck_fix(unit: ContentUnit, edited_text: str) -> bool:
     """Stub fix re-check (T9). Always accepts."""
     return True
+
+
+def compile(source_version: SourceVersion) -> CompileResult:
+    """Stub guideline compiler (T5).
+
+    Returns a dummy 384-dimensional embedding, empty lint flags, and collisions.
+    """
+    return CompileResult(
+        source_id=source_version.source_id,
+        version=source_version.version,
+        embedding=[0.0] * 384,
+        lint_flags=[],
+        collisions=[],
+    )

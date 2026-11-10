@@ -1,0 +1,8 @@
+# Axiom Code Ownership
+# CODEOWNERS on /contracts; contract changes need both leads' approval.
+# Ayush Aryan: @Arya756 (Multimodal Engine Lead)
+# Yashkumar Nimje: @WizardCarp85 (Platform & Governance Lead)
+
+/contracts/ @Arya756 @WizardCarp85
+CODEOWNERS @Arya756 @WizardCarp85
+

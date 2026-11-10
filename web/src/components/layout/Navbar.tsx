@@ -1,6 +1,6 @@
 import React from "react";
 import { UserRole } from "../../types";
-import { Shield, Sparkles, UserCheck, Layers, BookOpen, Compass, CheckSquare } from "lucide-react";
+import { Sparkles, Compass, CheckSquare, BookOpen, ShieldCheck } from "lucide-react";
 
 interface NavbarProps {
   currentRole: UserRole;
@@ -23,88 +23,97 @@ export function Navbar({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-pastel-border shadow-pastel">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand & Tenant Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pastel-indigo-badge via-pastel-blue-badge to-pastel-purple-badge border border-pastel-indigo-border flex items-center justify-center shadow-pastel">
-            <Sparkles className="w-5 h-5 text-pastel-indigo-text" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-100 ring-1 ring-black/5">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-pastel-text">Axiom</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-pastel-bg text-pastel-subtext border border-pastel-border">
+              <span className="font-bold text-base tracking-tight text-slate-900">Axiom</span>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
                 Round 2
               </span>
             </div>
-            <p className="text-[11px] text-pastel-muted">
-              Tenant: <span className="font-semibold text-pastel-indigo-text">Meridian Flow</span> (RLS Isolated)
+            <p className="text-xs text-slate-500 flex items-center gap-1 font-normal">
+              Tenant: <span className="font-semibold text-slate-700">Meridian Flow</span>
+              <span className="inline-flex items-center text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                RLS Isolated
+              </span>
             </p>
           </div>
         </div>
 
         {/* View Tabs */}
-        <nav className="flex items-center gap-1.5 bg-pastel-bg p-1 rounded-xl border border-pastel-border" aria-label="Main Navigation">
+        <nav className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 shadow-inner" aria-label="Main Navigation">
           <button
             type="button"
             onClick={() => onTabChange("workspace")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
               activeTab === "workspace"
-                ? "bg-white text-pastel-indigo-text shadow-pastel border border-pastel-border"
-                : "text-pastel-subtext hover:text-pastel-text"
+                ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
-            <Compass className="w-3.5 h-3.5" />
+            <Compass className="w-3.5 h-3.5 text-indigo-500" />
             Creator Workspace
           </button>
 
           <button
             type="button"
             onClick={() => onTabChange("reviewer")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
               activeTab === "reviewer"
-                ? "bg-white text-pastel-indigo-text shadow-pastel border border-pastel-border"
-                : "text-pastel-subtext hover:text-pastel-text"
+                ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
-            <CheckSquare className="w-3.5 h-3.5" />
+            <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
             Review Queue
           </button>
 
           <button
             type="button"
             onClick={() => onTabChange("admin")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
               activeTab === "admin"
-                ? "bg-white text-pastel-indigo-text shadow-pastel border border-pastel-border"
-                : "text-pastel-subtext hover:text-pastel-text"
+                ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
+            <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
             Admin Brand Kit
           </button>
         </nav>
 
         {/* Role Persona Switcher (Judge friendly) */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="role-select" className="text-xs font-medium text-pastel-subtext hidden md:block">
+        <div className="flex items-center gap-2.5">
+          <label htmlFor="role-select" className="text-xs font-medium text-slate-500 hidden md:block">
             Active Role:
           </label>
-          <select
-            id="role-select"
-            value={currentRole}
-            onChange={(e) => onRoleChange(e.target.value as UserRole)}
-            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-pastel-indigo-border bg-pastel-indigo-bg text-pastel-indigo-text shadow-pastel cursor-pointer focus:ring-2 focus:ring-pastel-indigo-border outline-none"
-          >
-            {roles.map((r) => (
-              <option key={r.role} value={r.role}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              id="role-select"
+              value={currentRole}
+              onChange={(e) => onRoleChange(e.target.value as UserRole)}
+              className="text-xs font-semibold pl-3 pr-8 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-800 shadow-sm cursor-pointer hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all appearance-none"
+            >
+              {roles.map((r) => (
+                <option key={r.role} value={r.role}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
     </header>
   );
 }
-

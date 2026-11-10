@@ -18,7 +18,7 @@ import { IntentCardDrawer } from "../components/creator/IntentCardDrawer";
 import { FindingCard } from "../components/findings/FindingCard";
 import { DocumentViewer } from "../components/viewer/DocumentViewer";
 import { ReviewerQueue } from "../components/reviewer/ReviewerQueue";
-import { Filter, CheckCircle2, AlertCircle, FileText, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles, Info, UploadCloud, Compass, ChevronDown, ChevronUp, FileText } from "lucide-react";
 
 export default function Home() {
   const [currentRole, setCurrentRole] = useState<UserRole>("creator");
@@ -34,6 +34,10 @@ export default function Home() {
   const [runProgress, setRunProgress] = useState<ReviewRunProgress | null>(null);
   const [findingFilter, setFindingFilter] = useState<string>("all");
   const [statusBanner, setStatusBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
+
+  // Workspace panel toggles (clean, space-efficient control)
+  const [showUploadPanel, setShowUploadPanel] = useState<boolean>(false);
+  const [showIntentPanel, setShowIntentPanel] = useState<boolean>(false);
 
   // Finding filtering
   const filteredFindings = findings.filter((f) => {
@@ -70,7 +74,7 @@ export default function Home() {
       })
     );
 
-    // If accept, update the text unit inline!
+    // If accept, update the text unit inline
     if (decision === "accept") {
       const finding = findings.find((f) => f.finding_id === findingId);
       if (finding && finding.suggested_fix) {
@@ -115,6 +119,7 @@ export default function Home() {
   };
 
   const handleUploadSuccess = (file: File, sensitivity: SensitivityLevel) => {
+    setShowUploadPanel(true);
     setRunProgress({
       status: "running",
       progress: 25,
@@ -201,8 +206,10 @@ export default function Home() {
     handleDecision(findingId, "override", reason);
   };
 
+  const currentRevision = revisions[0] || SEEDED_REVISION;
+
   return (
-    <div className="min-h-screen bg-pastel-bg text-pastel-text flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* Navbar with role switcher & tabs */}
       <Navbar
         currentRole={currentRole}
@@ -220,29 +227,104 @@ export default function Home() {
         {statusBanner && (
           <div
             role="status"
-            className={`p-3 rounded-xl border text-xs flex items-center gap-2 shadow-pastel ${
+            className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-center gap-3 shadow-sm transition-all duration-200 ${
               statusBanner.type === "success"
-                ? "bg-pastel-green-bg border-pastel-green-border text-pastel-green-text"
-                : "bg-pastel-indigo-bg border-pastel-indigo-border text-pastel-indigo-text"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                : "bg-indigo-50 border-indigo-200 text-indigo-900"
             }`}
           >
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            <span className="font-medium">{statusBanner.message}</span>
+            {statusBanner.type === "success" ? (
+              <div className="p-1 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            ) : (
+              <div className="p-1 rounded-full bg-indigo-100 text-indigo-700 flex-shrink-0">
+                <Info className="w-4 h-4" />
+              </div>
+            )}
+            <span className="font-semibold">{statusBanner.message}</span>
           </div>
         )}
 
-        {/* TAB 1: WORKSPACE (Creator upload, Intent Card, Viewer, Finding Cards) */}
+        {/* TAB 1: WORKSPACE */}
         {activeTab === "workspace" && (
           <div className="space-y-5">
-            {/* Top Row: Upload & Intent Card Drawer */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              <div className="lg:col-span-6">
+            {/* Unified Workspace Control Ribbon: Eliminates top-row empty voids */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+              {/* Active Draft Metadata */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-900">{currentRevision.file_name}</span>
+                    <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      v{currentRevision.version}
+                    </span>
+                    <span className="text-xs uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {currentRevision.sensitivity}
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                      {findings.length} Findings
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 font-normal">
+                    Target: <span className="font-semibold text-slate-700">{intentCard.purpose}</span> · Audience: <span className="text-slate-700 font-medium">{intentCard.audience}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Toggles: Expand drawer only when needed */}
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadPanel((prev) => !prev);
+                    if (!showUploadPanel) setShowIntentPanel(false);
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all duration-150 ${
+                    showUploadPanel
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+                  }`}
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  {showUploadPanel ? "Close Upload" : "Upload Draft"}
+                  {showUploadPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowIntentPanel((prev) => !prev);
+                    if (!showIntentPanel) setShowUploadPanel(false);
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all duration-150 ${
+                    showIntentPanel
+                      ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+                  }`}
+                >
+                  <Compass className="w-4 h-4" />
+                  {showIntentPanel ? "Close Intent Card" : "Intent Card Constraints"}
+                  {showIntentPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Conditionally rendered panels (clean, full-width, zero empty void) */}
+            {showUploadPanel && (
+              <div className="transition-all duration-200">
                 <UploadDrawer
                   onUploadSuccess={handleUploadSuccess}
                   runProgress={runProgress}
                 />
               </div>
-              <div className="lg:col-span-6">
+            )}
+
+            {showIntentPanel && (
+              <div className="transition-all duration-200">
                 <IntentCardDrawer
                   intentCard={intentCard}
                   onSaveIntentCard={setIntentCard}
@@ -254,12 +336,12 @@ export default function Home() {
                   }}
                 />
               </div>
-            </div>
+            )}
 
-            {/* Split Screen: Document Viewer (Left) + Finding Cards (Right) */}
+            {/* Split Screen: Document Canvas (Left) + Finding Cards (Right) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              {/* Left Column: Interactive Document Canvas with Highlights & Bounding Boxes */}
-              <div className="lg:col-span-7 h-[780px] sticky top-20">
+              {/* Left Column: Interactive Document Canvas */}
+              <div className="lg:col-span-7 h-[calc(100vh-14rem)] min-h-[640px] sticky top-20">
                 <DocumentViewer
                   units={units}
                   findings={findings}
@@ -271,31 +353,35 @@ export default function Home() {
 
               {/* Right Column: Evidence-First Finding Cards */}
               <div className="lg:col-span-5 space-y-4">
-                <div className="rounded-xl border border-pastel-border bg-pastel-card p-4 shadow-pastel space-y-3">
+                <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xs font-bold text-pastel-text flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-pastel-indigo-text" />
+                      <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
                         Automated Receipts & Findings ({findings.length})
                       </h2>
-                      <p className="text-[11px] text-pastel-muted">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Evidence-first layout: citations validated by Verifier
                       </p>
                     </div>
                   </div>
 
                   {/* Filter Pills */}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-pastel-border" role="tablist" aria-label="Finding filters">
+                  <div
+                    className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100"
+                    role="tablist"
+                    aria-label="Finding filters"
+                  >
                     {["all", "open", "resolved", "outdated", "violation", "unsupported", "accessibility"].map((f) => (
                       <button
                         key={f}
                         role="tab"
                         aria-selected={findingFilter === f}
                         onClick={() => setFindingFilter(f)}
-                        className={`px-2 py-1 rounded text-[11px] font-medium capitalize transition-all ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold capitalize transition-all duration-150 ${
                           findingFilter === f
-                            ? "bg-pastel-indigo-badge text-pastel-indigo-text font-semibold border border-pastel-indigo-border"
-                            : "bg-pastel-bg text-pastel-subtext hover:bg-pastel-hover border border-pastel-border"
+                            ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
                         }`}
                       >
                         {f}
@@ -305,7 +391,7 @@ export default function Home() {
                 </div>
 
                 {/* Cards List */}
-                <div className="space-y-3" role="region" aria-label="Evidence-first finding cards list">
+                <div className="space-y-3.5" role="region" aria-label="Evidence-first finding cards list">
                   {filteredFindings.map((finding) => (
                     <FindingCard
                       key={finding.finding_id}
@@ -317,7 +403,7 @@ export default function Home() {
                     />
                   ))}
                   {filteredFindings.length === 0 && (
-                    <div className="p-8 text-center bg-pastel-card rounded-xl border border-pastel-border text-xs text-pastel-muted">
+                    <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-500 shadow-sm">
                       No findings match the selected filter.
                     </div>
                   )}
@@ -365,4 +451,3 @@ export default function Home() {
     </div>
   );
 }
-

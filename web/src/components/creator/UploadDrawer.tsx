@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { SensitivityLevel, ReviewRunProgress } from "../../types";
-import { UploadCloud, FileText, Shield, Loader2, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
+import { UploadCloud, FileText, Shield, Loader2, CheckCircle2, AlertTriangle, Sparkles, Check } from "lucide-react";
 
 interface UploadDrawerProps {
   onUploadSuccess: (file: File, sensitivity: SensitivityLevel) => void;
@@ -32,40 +32,56 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
     onUploadSuccess(selectedFile, sensitivity);
   };
 
-  const sensitivityLabels: Record<SensitivityLevel, { title: string; desc: string; badgeClass: string }> = {
+  const sensitivityLabels: Record<
+    SensitivityLevel,
+    { title: string; desc: string; badge: string; colorClass: string }
+  > = {
     public: {
       title: "Public",
       desc: "Marketing & external website materials",
-      badgeClass: "bg-pastel-blue-badge text-pastel-blue-text border-pastel-blue-border",
+      badge: "Standard",
+      colorClass: "border-sky-300 bg-sky-50/60 text-sky-900 ring-sky-500",
     },
     internal: {
       title: "Internal",
       desc: "Standard internal company docs & planning",
-      badgeClass: "bg-pastel-indigo-badge text-pastel-indigo-text border-pastel-indigo-border",
+      badge: "Default",
+      colorClass: "border-indigo-300 bg-indigo-50/60 text-indigo-900 ring-indigo-500",
     },
     confidential: {
       title: "Confidential",
       desc: "NDA-gated enterprise strategy & pricing",
-      badgeClass: "bg-pastel-amber-badge text-pastel-amber-text border-pastel-amber-border",
+      badge: "High",
+      colorClass: "border-amber-300 bg-amber-50/60 text-amber-900 ring-amber-500",
     },
     restricted: {
       title: "Restricted",
       desc: "Strictly deterministic checks: 0 external API calls",
-      badgeClass: "bg-pastel-rose-badge text-pastel-rose-text border-pastel-rose-border",
+      badge: "Isolated",
+      colorClass: "border-rose-300 bg-rose-50/60 text-rose-900 ring-rose-500",
     },
   };
 
+  const isRunning = Boolean(runProgress && runProgress.status === "running");
+
   return (
-    <div className="rounded-xl border border-pastel-border bg-pastel-card p-5 shadow-pastel space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-pastel-text flex items-center gap-1.5">
-          <UploadCloud className="w-4 h-4 text-pastel-indigo-text" />
-          Draft Upload & Sensitivity Scoping
-        </h2>
-        <span className="text-xs text-pastel-muted">Accepts .md, .txt, .pdf, .docx, .png, .jpg</span>
+    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm hover:shadow-md transition-shadow duration-200 space-y-4">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+            <UploadCloud className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">Draft Upload & Sensitivity Scoping</h2>
+            <p className="text-xs text-slate-500">Ingest Markdown, PDF, DOCX, or graphic banners</p>
+          </div>
+        </div>
+        <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+          .md, .txt, .pdf, .docx, .png, .jpg
+        </span>
       </div>
 
-      <form onSubmit={handleTriggerUpload} className="space-y-4">
+      <form onSubmit={handleTriggerUpload} className="space-y-3.5">
         {/* Dropzone */}
         <div
           onDragOver={(e) => {
@@ -74,12 +90,12 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
           }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${
+          className={`border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 cursor-pointer ${
             isDragging
-              ? "border-pastel-indigo-text bg-pastel-indigo-bg/60"
+              ? "border-indigo-500 bg-indigo-50/80 scale-[1.01]"
               : selectedFile
-              ? "border-pastel-green-border bg-pastel-green-bg/40"
-              : "border-pastel-border bg-pastel-bg/60 hover:bg-pastel-hover/60"
+              ? "border-emerald-400 bg-emerald-50/40"
+              : "border-slate-200 bg-slate-50/60 hover:bg-slate-50 hover:border-slate-300"
           }`}
         >
           <input
@@ -89,36 +105,42 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
             accept=".md,.txt,.pdf,.docx,.png,.jpg,.jpeg"
             className="sr-only"
           />
-          <label htmlFor="file-upload-input" className="cursor-pointer block space-y-2">
-            <div className="w-10 h-10 rounded-full bg-white mx-auto flex items-center justify-center shadow-pastel border border-pastel-border">
+          <label htmlFor="file-upload-input" className="cursor-pointer block space-y-1.5">
+            <div
+              className={`w-10 h-10 rounded-xl mx-auto flex items-center justify-center transition-all ${
+                selectedFile
+                  ? "bg-emerald-100 text-emerald-700 shadow-sm"
+                  : "bg-white text-indigo-600 shadow-sm border border-slate-200"
+              }`}
+            >
               {selectedFile ? (
-                <FileText className="w-5 h-5 text-pastel-green-text" />
+                <FileText className="w-5 h-5" />
               ) : (
-                <UploadCloud className="w-5 h-5 text-pastel-indigo-text" />
+                <UploadCloud className="w-5 h-5" />
               )}
             </div>
             {selectedFile ? (
-              <div>
-                <p className="text-xs font-semibold text-pastel-text">{selectedFile.name}</p>
-                <p className="text-[11px] text-pastel-muted">
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-slate-900">{selectedFile.name}</p>
+                <p className="text-[11px] text-emerald-700 font-medium">
                   {(selectedFile.size / 1024).toFixed(1)} KB · Ready to review
                 </p>
               </div>
             ) : (
               <div>
-                <p className="text-xs font-medium text-pastel-text">
-                  <span className="font-semibold text-pastel-indigo-text hover:underline">Click to upload</span> or drag and drop
+                <p className="text-xs font-medium text-slate-700">
+                  <span className="font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2">Click to select file</span> or drag and drop
                 </p>
-                <p className="text-[11px] text-pastel-muted">Markdown, PDF text layer, DOCX, or visual banners</p>
+                <p className="text-[11px] text-slate-500">Auto-tokenized into content units and verified</p>
               </div>
             )}
           </label>
         </div>
 
         {/* Sensitivity Scoping */}
-        <div>
-          <label className="block text-xs font-semibold text-pastel-text mb-2 flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-pastel-indigo-text" />
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-indigo-600" />
             Sensitivity Policy:
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Sensitivity selection">
@@ -132,16 +154,19 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
                   role="radio"
                   aria-checked={isSelected}
                   onClick={() => setSensitivity(level)}
-                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                  className={`p-2.5 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between ${
                     isSelected
-                      ? `border-pastel-indigo-border bg-pastel-indigo-bg shadow-pastel ring-1 ring-pastel-indigo-border`
-                      : "border-pastel-border bg-pastel-card hover:bg-pastel-hover text-pastel-subtext"
+                      ? `border-indigo-500 bg-indigo-50/70 shadow-sm ring-2 ring-indigo-500/20 text-indigo-950`
+                      : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-600"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-pastel-text capitalize">{info.title}</span>
+                  <div className="flex items-center justify-between mb-1 w-full">
+                    <span className="text-xs font-bold text-slate-900 capitalize flex items-center gap-1">
+                      {info.title}
+                    </span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 font-bold" />}
                   </div>
-                  <p className="text-[10px] text-pastel-muted leading-tight">{info.desc}</p>
+                  <p className="text-[10px] text-slate-500 leading-snug">{info.desc}</p>
                 </button>
               );
             })}
@@ -151,17 +176,17 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
         {/* Submit */}
         <button
           type="submit"
-          disabled={!selectedFile || Boolean(runProgress && runProgress.status === "running")}
-          className={`w-full py-2.5 px-4 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 shadow-pastel transition-all ${
-            !selectedFile || Boolean(runProgress && runProgress.status === "running")
-              ? "bg-pastel-border text-pastel-muted cursor-not-allowed"
-              : "bg-pastel-indigo-badge hover:bg-pastel-indigo-border text-pastel-indigo-text border border-pastel-indigo-border"
+          disabled={!selectedFile || isRunning}
+          className={`w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-all duration-150 ${
+            !selectedFile || isRunning
+              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-indigo-200"
           }`}
         >
-          {runProgress && runProgress.status === "running" ? (
+          {isRunning ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-pastel-indigo-text" />
-              Running Multi-Agent Pre-Check ({runProgress.progress}%)...
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-200" />
+              Running Multi-Agent Pre-Check ({runProgress?.progress}%)...
             </>
           ) : (
             <>
@@ -172,39 +197,41 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
         </button>
       </form>
 
-      {/* Run Progress Telemetry */}
+      {/* Run Progress Telemetry - without cutoffs */}
       {runProgress && (
         <div
           role="status"
           aria-live="polite"
-          className="rounded-lg border border-pastel-border bg-pastel-bg p-3 space-y-2"
+          className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 space-y-2"
         >
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-pastel-text flex items-center gap-1.5">
-              {runProgress.status === "running" && <Loader2 className="w-3.5 h-3.5 animate-spin text-pastel-indigo-text" />}
-              {runProgress.status === "done" && <CheckCircle2 className="w-3.5 h-3.5 text-pastel-green-text" />}
-              {runProgress.status === "partial" && <AlertTriangle className="w-3.5 h-3.5 text-pastel-amber-text" />}
+            <span className="font-semibold text-slate-900 flex items-center gap-2">
+              {runProgress.status === "running" && <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />}
+              {runProgress.status === "done" && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+              {runProgress.status === "partial" && <AlertTriangle className="w-4 h-4 text-amber-600" />}
               Review Run: {runProgress.status.toUpperCase()}
             </span>
-            <span className="font-mono text-[11px] text-pastel-muted">{runProgress.progress}%</span>
+            <span className="font-mono text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+              {runProgress.progress}%
+            </span>
           </div>
 
-          <div className="w-full bg-pastel-border rounded-full h-1.5 overflow-hidden">
+          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden shadow-inner">
             <div
-              className={`h-full transition-all duration-300 ${
+              className={`h-full transition-all duration-300 rounded-full ${
                 runProgress.status === "failed"
-                  ? "bg-pastel-rose-text"
+                  ? "bg-rose-600"
                   : runProgress.status === "partial"
-                  ? "bg-pastel-amber-text"
-                  : "bg-pastel-indigo-text"
+                  ? "bg-amber-500"
+                  : "bg-indigo-600"
               }`}
               style={{ width: `${runProgress.progress}%` }}
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-pastel-subtext pt-0.5">
-            <span>Step: {runProgress.active_step || "Checkers completed"}</span>
-            <span className="font-medium text-pastel-text">
+          <div className="flex items-center justify-between text-xs text-slate-600 pt-0.5 gap-2 flex-wrap">
+            <span>Step: <span className="font-medium text-slate-800">{runProgress.active_step || "Checkers completed"}</span></span>
+            <span className="font-semibold text-slate-900 flex-shrink-0">
               {runProgress.findings_count} finding{runProgress.findings_count === 1 ? "" : "s"} identified
               {runProgress.cached && " (Cache hit)"}
             </span>

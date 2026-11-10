@@ -3,13 +3,10 @@ import { Revision, Finding, UserRole } from "../../types";
 import { diffWords } from "diff";
 import {
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   Scale,
   GitCompare,
   FileCheck2,
-  Clock,
-  ShieldCheck,
   Send,
 } from "lucide-react";
 
@@ -85,15 +82,19 @@ export function ReviewerQueue({
   const diffParts = diffWords(originalDraftText, revisedDraftText);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Revision Selection Header */}
-      <div className="rounded-xl border border-pastel-border bg-pastel-card p-4 shadow-pastel space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Scale className="w-5 h-5 text-pastel-indigo-text" />
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
+              <Scale className="w-5 h-5" />
+            </div>
             <div>
-              <h2 className="text-sm font-bold text-pastel-text">Governance & Review Queue</h2>
-              <p className="text-xs text-pastel-muted">Role active: <span className="font-semibold capitalize text-pastel-indigo-text">{currentUserRole}</span></p>
+              <h2 className="text-base font-bold text-slate-900">Governance & Review Queue</h2>
+              <p className="text-xs text-slate-500">
+                Role active: <span className="font-semibold capitalize text-indigo-600">{currentUserRole}</span>
+              </p>
             </div>
           </div>
 
@@ -101,13 +102,13 @@ export function ReviewerQueue({
             <button
               type="button"
               onClick={() => setShowDiff(!showDiff)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-all ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all duration-150 ${
                 showDiff
-                  ? "bg-pastel-indigo-badge text-pastel-indigo-text border-pastel-indigo-border shadow-pastel"
-                  : "bg-white text-pastel-subtext border-pastel-border hover:bg-pastel-hover"
+                  ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
+                  : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
               }`}
             >
-              <GitCompare className="w-3.5 h-3.5" />
+              <GitCompare className="w-4 h-4 text-indigo-500" />
               {showDiff ? "Hide Revision Diff" : "View Revision Diff"}
             </button>
           </div>
@@ -117,16 +118,20 @@ export function ReviewerQueue({
         {requiresLegalReviewer && (
           <div
             role="alert"
-            className="rounded-lg border border-pastel-amber-border bg-pastel-amber-bg p-3 text-xs text-pastel-amber-text flex items-start gap-2.5"
+            className="rounded-xl border border-amber-300 bg-amber-50/80 p-4 text-xs text-amber-900 flex items-start gap-3 shadow-sm"
           >
-            <AlertTriangle className="w-4 h-4 mt-0.5 text-pastel-amber-text flex-shrink-0" />
-            <div>
-              <span className="font-semibold text-pastel-text">
+            <div className="p-1 rounded-lg bg-amber-100 text-amber-700 flex-shrink-0 mt-0.5">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <span className="font-bold text-slate-900">
                 Mandatory Legal Reviewer Sign-Off Enforced (PRD §4.2 Y-11):
               </span>
-              <p className="text-pastel-subtext mt-0.5">
+              <p className="text-slate-700 leading-relaxed">
                 This revision contains {claimFindings.length} claim-type finding(s) (
-                <span className="font-mono font-medium">Outdated / Unsupported</span>). Governance policy requires approval by <span className="font-bold text-pastel-indigo-text">legal_reviewer</span>.
+                <span className="font-mono font-semibold bg-white/80 px-1.5 py-0.5 rounded border border-amber-200">
+                  Outdated / Unsupported
+                </span>). Governance policy requires approval by <span className="font-bold text-indigo-700">legal_reviewer</span>.
               </p>
             </div>
           </div>
@@ -135,24 +140,24 @@ export function ReviewerQueue({
 
       {/* Revision Diff View */}
       {showDiff && (
-        <div className="rounded-xl border border-pastel-border bg-pastel-card p-4 shadow-pastel space-y-2">
-          <div className="flex items-center justify-between border-b border-pastel-border pb-2">
-            <span className="text-xs font-bold text-pastel-text flex items-center gap-1.5">
-              <GitCompare className="w-3.5 h-3.5 text-pastel-indigo-text" />
-              Tracked Change Diff: Revision v1 &rarr; v2
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <GitCompare className="w-4 h-4 text-indigo-600" />
+              Tracked Change Diff: Revision v1 → v2
             </span>
-            <span className="text-[11px] text-pastel-muted font-mono">
+            <span className="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
               Hash: {selectedRevision?.content_hash.substring(0, 12)}...
             </span>
           </div>
 
-          <div className="p-3 bg-pastel-bg rounded-lg border border-pastel-border text-xs font-mono leading-relaxed flex flex-wrap gap-1">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono leading-relaxed flex flex-wrap gap-1.5 shadow-inner">
             {diffParts.map((part, index) => {
               if (part.added) {
                 return (
                   <span
                     key={index}
-                    className="bg-pastel-green-badge text-pastel-green-text border border-pastel-green-border px-1 rounded font-semibold"
+                    className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-bold"
                   >
                     +{part.value}
                   </span>
@@ -162,14 +167,14 @@ export function ReviewerQueue({
                 return (
                   <span
                     key={index}
-                    className="bg-pastel-rose-badge text-pastel-rose-text border border-pastel-rose-border px-1 rounded line-through opacity-80"
+                    className="bg-rose-100 text-rose-800 border border-rose-300 px-1.5 py-0.5 rounded line-through font-semibold"
                   >
                     -{part.value}
                   </span>
                 );
               }
               return (
-                <span key={index} className="text-pastel-text">
+                <span key={index} className="text-slate-800">
                   {part.value}
                 </span>
               );
@@ -179,33 +184,33 @@ export function ReviewerQueue({
       )}
 
       {/* Items Pending Approval Queue */}
-      <div className="rounded-xl border border-pastel-border bg-pastel-card p-4 shadow-pastel space-y-3">
-        <h3 className="text-xs font-bold text-pastel-text">Pending Approvals</h3>
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-4">
+        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">Pending Approvals</h3>
 
-        <div className="divide-y divide-pastel-border/60">
+        <div className="divide-y divide-slate-100">
           {revisions.map((rev) => (
-            <div key={rev.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-xs text-pastel-text">{rev.file_name}</span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-pastel-bg border border-pastel-border">
+            <div key={rev.id} className="py-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-bold text-sm text-slate-900">{rev.file_name}</span>
+                  <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                     v{rev.version}
                   </span>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-pastel-amber-badge text-pastel-amber-text border border-pastel-amber-border">
+                  <span className="text-xs uppercase font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                     {rev.approval_status}
                   </span>
                 </div>
-                <p className="text-[11px] text-pastel-muted font-mono">
-                  SHA-256: {rev.content_hash.substring(0, 24)}...
+                <p className="text-xs text-slate-500 font-mono">
+                  SHA-256: <span className="text-slate-700">{rev.content_hash.substring(0, 24)}...</span>
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsRequesting(!isRequesting)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-pastel-rose-text bg-white hover:bg-pastel-rose-bg border border-pastel-rose-border transition-all"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-white hover:bg-rose-50 border border-rose-200 shadow-sm transition-all"
                 >
                   Request Changes
                 </button>
@@ -214,10 +219,10 @@ export function ReviewerQueue({
                   type="button"
                   disabled={!canApprove}
                   onClick={handleApprove}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-pastel transition-all ${
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm transition-all duration-150 ${
                     canApprove
-                      ? "bg-pastel-green-badge hover:bg-pastel-green-border text-pastel-green-text border border-pastel-green-border cursor-pointer"
-                      : "bg-pastel-border text-pastel-muted border-pastel-border cursor-not-allowed opacity-60"
+                      ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-200 cursor-pointer"
+                      : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
                   }`}
                   title={
                     !canApprove
@@ -225,7 +230,7 @@ export function ReviewerQueue({
                       : "Approve and bind SHA-256 hash"
                   }
                 >
-                  <FileCheck2 className="w-3.5 h-3.5" />
+                  <FileCheck2 className="w-4 h-4" />
                   Approve (Hash-Bound)
                 </button>
               </div>
@@ -235,8 +240,8 @@ export function ReviewerQueue({
 
         {/* Request Changes Drawer */}
         {isRequesting && (
-          <form onSubmit={handleRequestSubmit} className="pt-3 border-t border-pastel-border space-y-2">
-            <label htmlFor="request-notes" className="block text-xs font-semibold text-pastel-text">
+          <form onSubmit={handleRequestSubmit} className="pt-4 border-t border-slate-200 space-y-3 bg-slate-50/60 p-4 rounded-xl">
+            <label htmlFor="request-notes" className="block text-xs font-bold text-slate-800">
               Feedback Notes for Creator:
             </label>
             <textarea
@@ -246,21 +251,21 @@ export function ReviewerQueue({
               onChange={(e) => setRequestNotes(e.target.value)}
               placeholder="Specify required corrections before approval can proceed."
               required
-              className="w-full text-xs p-2 rounded-lg border border-pastel-border bg-pastel-bg text-pastel-text"
+              className="w-full text-xs p-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none shadow-sm"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsRequesting(false)}
-                className="px-2.5 py-1 text-xs text-pastel-subtext hover:bg-pastel-hover rounded"
+                className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-3 py-1 text-xs font-semibold bg-pastel-rose-badge text-pastel-rose-text rounded border border-pastel-rose-border flex items-center gap-1"
+                className="px-4 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-lg shadow-sm shadow-rose-200 flex items-center gap-1.5 transition-colors"
               >
-                <Send className="w-3 h-3" />
+                <Send className="w-3.5 h-3.5" />
                 Send Request
               </button>
             </div>
@@ -270,38 +275,42 @@ export function ReviewerQueue({
 
       {/* Override Modal / Inline Form for Reviewer Override */}
       {overrideModal && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md rounded-xl border border-pastel-amber-border bg-white p-5 shadow-pastel-lg space-y-3">
-            <h3 className="text-sm font-bold text-pastel-text flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-pastel-amber-text" />
-              Override Finding: Mandatory Written Reason
-            </h3>
-            <p className="text-xs text-pastel-subtext">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2.5 text-amber-700">
+              <div className="p-2 rounded-xl bg-amber-50">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Override Finding: Mandatory Written Reason
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
               Per PRD §4.2 Y-09 & Y-11, overriding a rule or claim finding requires an explicit, audited written justification.
             </p>
 
-            <form onSubmit={handleOverrideSubmit} className="space-y-3">
+            <form onSubmit={handleOverrideSubmit} className="space-y-3.5">
               <textarea
                 rows={3}
                 value={overrideReason}
                 onChange={(e) => setOverrideReason(e.target.value)}
                 placeholder="Enter formal justification for overriding this finding..."
                 required
-                className="w-full text-xs p-2.5 rounded-lg border border-pastel-border bg-pastel-bg text-pastel-text focus:ring-2 focus:ring-pastel-indigo-border"
+                className="w-full text-xs p-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none shadow-sm"
               />
-              {overrideError && <p className="text-xs text-pastel-rose-text">{overrideError}</p>}
+              {overrideError && <p className="text-xs font-semibold text-rose-700">{overrideError}</p>}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setOverrideModal(null)}
-                  className="px-3 py-1.5 text-xs text-pastel-subtext hover:bg-pastel-hover rounded-lg"
+                  className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-pastel-amber-badge text-pastel-amber-text border border-pastel-amber-border rounded-lg shadow-pastel"
+                  className="px-4 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white rounded-xl shadow-sm shadow-amber-200 transition-colors"
                 >
                   Submit Audited Override
                 </button>
@@ -313,4 +322,3 @@ export function ReviewerQueue({
     </div>
   );
 }
-

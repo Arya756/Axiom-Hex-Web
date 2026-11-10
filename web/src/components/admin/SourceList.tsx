@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Source, SourceVersion } from "../../types";
-import { BookOpen, GitCommit, Calendar, Tag, ChevronDown, ChevronRight, CheckCircle2, History } from "lucide-react";
+import { Source } from "../../types";
+import { GitCommit, ChevronDown, ChevronRight, CheckCircle2, History } from "lucide-react";
 
 interface SourceListProps {
   sources: Source[];
@@ -20,17 +20,17 @@ export function SourceList({ sources, onSelectSource }: SourceListProps) {
   return (
     <div className="space-y-4">
       {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2 pb-2 border-b border-pastel-border" role="tablist" aria-label="Source kind filters">
+      <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-200" role="tablist" aria-label="Source kind filters">
         {["all", "rule", "fact", "term", "asset"].map((kind) => (
           <button
             key={kind}
             role="tab"
             aria-selected={filter === kind}
             onClick={() => setFilter(kind)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold capitalize transition-all duration-150 ${
               filter === kind
-                ? "bg-pastel-blue-badge text-pastel-blue-text border border-pastel-blue-border font-semibold shadow-pastel"
-                : "bg-pastel-card text-pastel-subtext hover:bg-pastel-hover border border-pastel-border"
+                ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
+                : "bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200"
             }`}
           >
             {kind}
@@ -47,62 +47,65 @@ export function SourceList({ sources, onSelectSource }: SourceListProps) {
           return (
             <div
               key={source.id}
-              className="rounded-xl border border-pastel-border bg-pastel-card shadow-pastel transition-all overflow-hidden"
+              className="rounded-2xl border border-slate-200/90 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
             >
               {/* Card Header */}
               <button
                 onClick={() => toggleExpand(source.id)}
                 aria-expanded={isExpanded}
-                className="w-full text-left p-4 flex items-start justify-between gap-4 hover:bg-pastel-hover/60 transition-colors"
+                className="w-full text-left p-5 flex items-start justify-between gap-4 hover:bg-slate-50/80 transition-colors"
               >
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-pastel-indigo-badge text-pastel-indigo-text border border-pastel-indigo-border">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/80">
                       {source.id}
                     </span>
-                    <h3 className="text-sm font-semibold text-pastel-text">{source.name}</h3>
-                    <span className="text-xs uppercase font-medium px-2 py-0.5 rounded-full bg-pastel-amber-badge text-pastel-amber-text border border-pastel-amber-border">
+                    <h3 className="text-sm font-bold text-slate-900">{source.name}</h3>
+                    <span className="text-xs uppercase font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                       {source.kind}
                     </span>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-pastel-green-badge text-pastel-green-text border border-pastel-green-border flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
                       v{source.current_version} (Current)
                     </span>
                   </div>
+                  {/* Full body text with no line-clamp truncation cutoffs */}
                   {currentVersion && (
-                    <p className="text-xs text-pastel-subtext line-clamp-2 pt-1 font-normal">
+                    <p className="text-xs text-slate-600 pt-0.5 font-normal leading-relaxed">
                       {currentVersion.body}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-pastel-muted flex-shrink-0 pt-1">
-                  <span className="text-xs text-pastel-muted flex items-center gap-1">
+                <div className="flex items-center gap-2 text-slate-400 flex-shrink-0 pt-0.5">
+                  <span className="text-xs text-slate-500 font-medium flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full">
                     <History className="w-3.5 h-3.5" />
                     {source.versions.length} ver
                   </span>
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-pastel-subtext" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-pastel-subtext" />
-                  )}
+                  <div className="p-1 rounded-lg bg-slate-100 text-slate-600">
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </div>
                 </div>
               </button>
 
               {/* Version History Drawer */}
               {isExpanded && (
-                <div className="p-4 pt-1 bg-pastel-bg/50 border-t border-pastel-border space-y-3">
+                <div className="p-5 pt-2 bg-slate-50/70 border-t border-slate-100 space-y-3.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-pastel-subtext flex items-center gap-1.5">
-                      <GitCommit className="w-3.5 h-3.5 text-pastel-indigo-text" />
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <GitCommit className="w-4 h-4 text-indigo-600" />
                       Version History & Supersession Chain
                     </span>
-                    <span className="text-[11px] text-pastel-muted">
+                    <span className="text-[11px] text-slate-500 font-medium">
                       Created: {new Date(source.created_at).toLocaleDateString()}
                     </span>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {source.versions.map((ver) => {
                       const isCurrent = ver.version === source.current_version;
                       const isSuperseded = Boolean(ver.superseded_by);
@@ -110,56 +113,56 @@ export function SourceList({ sources, onSelectSource }: SourceListProps) {
                       return (
                         <div
                           key={ver.version}
-                          className={`p-3 rounded-lg border text-xs transition-all ${
+                          className={`p-3.5 rounded-xl border text-xs transition-all ${
                             isCurrent
-                              ? "bg-pastel-green-bg border-pastel-green-border text-pastel-text"
-                              : "bg-pastel-card border-pastel-border text-pastel-muted"
+                              ? "bg-white border-emerald-300 ring-2 ring-emerald-500/10 shadow-sm"
+                              : "bg-white border-slate-200 text-slate-500"
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
                               <span
-                                className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
+                                className={`font-mono font-bold px-2 py-0.5 rounded text-xs ${
                                   isCurrent
-                                    ? "bg-pastel-green-badge text-pastel-green-text"
-                                    : "bg-pastel-hover text-pastel-subtext"
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                    : "bg-slate-100 text-slate-700"
                                 }`}
                               >
                                 v{ver.version}
                               </span>
                               {isCurrent && (
-                                <span className="font-semibold text-pastel-green-text text-[11px]">
+                                <span className="font-bold text-emerald-700 text-xs">
                                   Active Standard
                                 </span>
                               )}
                               {isSuperseded && (
-                                <span className="font-medium text-pastel-rose-text bg-pastel-rose-badge px-1.5 py-0.5 rounded text-[10px]">
+                                <span className="font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full text-[10px]">
                                   Superseded by v{ver.superseded_by}
                                 </span>
                               )}
                             </div>
-                            <span className="text-[11px] text-pastel-muted font-mono">
+                            <span className="text-[11px] text-slate-500 font-mono">
                               Hash: {ver.content_hash.substring(0, 10)}...
                             </span>
                           </div>
 
-                          <p className={`text-xs ${isCurrent ? "text-pastel-text" : "text-pastel-subtext"}`}>
+                          <p className={`text-xs leading-relaxed ${isCurrent ? "text-slate-800 font-medium" : "text-slate-600"}`}>
                             {ver.body}
                           </p>
 
                           {ver.value && (
-                            <div className="mt-2 flex items-center gap-2 text-[11px]">
-                              <span className="text-pastel-muted">Canonical value:</span>
-                              <span className="font-semibold font-mono text-pastel-text bg-white px-1.5 py-0.5 rounded border border-pastel-border">
+                            <div className="mt-2.5 flex items-center gap-2 text-xs">
+                              <span className="text-slate-500">Canonical value:</span>
+                              <span className="font-bold font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                                 {ver.value} {ver.unit ?? ""}
                               </span>
                             </div>
                           )}
 
-                          <div className="mt-2 pt-1 border-t border-pastel-border/60 flex items-center justify-between text-[10px] text-pastel-muted">
+                          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                             <span>Valid from: {new Date(ver.valid_from).toLocaleDateString()}</span>
                             {ver.valid_until && (
-                              <span>Expired: {new Date(ver.valid_until).toLocaleDateString()}</span>
+                              <span className="text-rose-600 font-medium">Expired: {new Date(ver.valid_until).toLocaleDateString()}</span>
                             )}
                           </div>
                         </div>
@@ -175,4 +178,3 @@ export function SourceList({ sources, onSelectSource }: SourceListProps) {
     </div>
   );
 }
-

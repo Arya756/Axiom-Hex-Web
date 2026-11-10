@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ContentUnit, Finding } from "../../types";
-import { FileText, Image as ImageIcon, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { FileText, Image as ImageIcon, ZoomIn, ZoomOut, Maximize2, AlertCircle } from "lucide-react";
 
 interface DocumentViewerProps {
   units: ContentUnit[];
@@ -34,33 +34,39 @@ export function DocumentViewer({
   const handleResetZoom = () => setZoom(100);
 
   return (
-    <div className="rounded-xl border border-pastel-border bg-pastel-card shadow-pastel overflow-hidden flex flex-col h-full">
+    <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm flex flex-col h-full overflow-hidden">
       {/* Viewer Toolbar */}
-      <div className="p-3 bg-pastel-bg/80 border-b border-pastel-border flex items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-pastel-indigo-text" />
-          <span className="font-semibold text-pastel-text capitalize">{fileType} Review Canvas</span>
-          <span className="text-[11px] text-pastel-muted">({units.length} content units parsed)</span>
+      <div className="px-5 py-3 bg-white border-b border-slate-200 flex items-center justify-between gap-3 text-xs flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+            <FileText className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-bold text-slate-800 capitalize text-sm">{fileType} Review Canvas</span>
+            <span className="text-xs text-slate-500 font-medium ml-2">
+              ({units.length} content units parsed)
+            </span>
+          </div>
         </div>
 
         {/* Zoom Controls */}
-        <div className="flex items-center gap-1.5 bg-white border border-pastel-border rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1">
           <button
             type="button"
             onClick={handleZoomOut}
             aria-label="Zoom out"
-            className="p-1 rounded hover:bg-pastel-hover text-pastel-subtext"
+            className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
-          <span className="text-[11px] font-mono px-1.5 text-pastel-text min-w-[3rem] text-center">
+          <span className="text-xs font-mono font-bold px-2 text-slate-700 min-w-[3rem] text-center select-none">
             {zoom}%
           </span>
           <button
             type="button"
             onClick={handleZoomIn}
             aria-label="Zoom in"
-            className="p-1 rounded hover:bg-pastel-hover text-pastel-subtext"
+            className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
@@ -68,42 +74,69 @@ export function DocumentViewer({
             type="button"
             onClick={handleResetZoom}
             aria-label="Reset zoom"
-            className="p-1 rounded hover:bg-pastel-hover text-pastel-subtext border-l border-pastel-border"
+            className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition-colors border-l border-slate-200 ml-0.5"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Canvas Area */}
-      <div className="flex-1 overflow-auto p-6 bg-pastel-bg/40 flex justify-center">
+      {/* Canvas Area: clean light canvas with natural padding and internal scroll */}
+      <div className="flex-1 overflow-auto p-4 sm:p-6 bg-slate-50/70">
         <div
-          className="w-full max-w-3xl bg-white border border-pastel-border rounded-xl shadow-pastel p-8 relative transition-transform duration-150"
+          className="w-full bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8 space-y-5 transition-transform duration-150"
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
         >
-          {/* Render Units */}
-          <div className="space-y-4">
-            {units.map((unit) => {
-              const unitFindings = findingByUnit[unit.unit_id] || [];
-              const isUnitSelected = unitFindings.some((f) => f.finding_id === selectedFindingId);
+          {units.map((unit) => {
+            const unitFindings = findingByUnit[unit.unit_id] || [];
+            const isUnitSelected = unitFindings.some((f) => f.finding_id === selectedFindingId);
 
-              // 1. Image unit with Responsive SVG Bounding-Box Overlay
-              if (unit.kind === "image") {
-                return (
-                  <div
-                    key={unit.unit_id}
-                    className={`relative rounded-xl border overflow-hidden transition-all ${
-                      isUnitSelected
-                        ? "border-pastel-rose-border ring-2 ring-pastel-rose-border bg-pastel-rose-bg/20"
-                        : "border-pastel-border bg-pastel-bg"
-                    }`}
-                  >
-                    {/* Simulated banner/graphic image */}
-                    <div className="w-full h-48 bg-gradient-to-r from-pastel-blue-bg via-pastel-indigo-bg to-pastel-purple-bg flex items-center justify-center relative">
-                      <div className="text-center p-4">
-                        <ImageIcon className="w-8 h-8 text-pastel-indigo-text mx-auto mb-2 opacity-80" />
-                        <p className="text-sm font-bold text-pastel-indigo-text">{unit.text}</p>
-                        <p className="text-xs text-pastel-muted mt-1">{unit.alt_text}</p>
+            // 1. Image unit with Responsive SVG Bounding-Box Overlay
+            if (unit.kind === "image") {
+              return (
+                <div
+                  key={unit.unit_id}
+                  className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                    isUnitSelected
+                      ? "border-rose-400 ring-2 ring-rose-400/20 shadow-sm"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  {/* Marketing Banner Container */}
+                  <div className="relative bg-gradient-to-br from-indigo-50/80 via-slate-50 to-sky-50/60 p-6 rounded-t-2xl border-b border-slate-200">
+                    {/* Top graphic header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                          <ImageIcon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 tracking-tight">Meridian Flow Platform</p>
+                          <p className="text-[11px] text-slate-500">Visual Campaign Banner Asset</p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full border border-indigo-200">
+                        Image Unit: {unit.unit_id}
+                      </span>
+                    </div>
+
+                    {/* Banner Graphic Area (relative canvas for SVG bounding box) */}
+                    <div className="relative w-full h-44 rounded-xl border border-slate-300 bg-white shadow-inner overflow-hidden flex flex-col justify-between p-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Primary Graphic Banner Layer
+                        </span>
+                        <p className="text-sm font-bold text-slate-800 leading-snug">{unit.text}</p>
+                      </div>
+
+                      {/* Promo callout text positioned in lower half corresponding to bbox [y: 0.48 to 0.78] */}
+                      <div className="p-2.5 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-between text-xs">
+                        <span className="text-sky-800 font-medium">
+                          {unit.alt_text}
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold text-sky-600 bg-white px-1.5 py-0.5 rounded border border-sky-200">
+                          Contrast: 2.1:1 (Fails AA)
+                        </span>
                       </div>
 
                       {/* Responsive SVG Bounding Box Overlay using relative coordinates (viewBox 0 0 1 1) */}
@@ -135,22 +168,22 @@ export function DocumentViewer({
                                     y={y0}
                                     width={w}
                                     height={h}
-                                    rx={0.015}
+                                    rx={0.02}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (onSelectFinding) onSelectFinding(f.finding_id);
                                     }}
                                     className={`transition-all ${
                                       isFSelected
-                                        ? "fill-pastel-rose-badge/50 stroke-pastel-rose-text stroke-[0.01] animate-pulse"
-                                        : "fill-pastel-amber-badge/30 stroke-pastel-amber-text stroke-[0.006] hover:fill-pastel-amber-badge/50"
+                                        ? "fill-rose-500/15 stroke-rose-600 stroke-[0.012] animate-pulse"
+                                        : "fill-amber-500/10 stroke-amber-600 stroke-[0.008] hover:fill-amber-500/20"
                                     }`}
                                   />
                                   <text
                                     x={x0 + 0.02}
-                                    y={y0 + 0.06}
-                                    fontSize="0.04"
-                                    className="fill-pastel-text font-mono font-bold select-none pointer-events-none"
+                                    y={y0 + 0.05}
+                                    fontSize="0.035"
+                                    className="fill-slate-900 font-mono font-bold select-none pointer-events-none"
                                   >
                                     {f.type.toUpperCase()}
                                   </text>
@@ -167,7 +200,7 @@ export function DocumentViewer({
                                 type="button"
                                 aria-label={`Select bounding box for ${f.type} finding`}
                                 onClick={() => onSelectFinding && onSelectFinding(f.finding_id)}
-                                className="sr-only pointer-events-auto focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-20 px-2 py-1 bg-white text-xs text-pastel-text rounded border border-pastel-border shadow-pastel"
+                                className="sr-only pointer-events-auto focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-20 px-3 py-1.5 bg-white text-xs font-semibold text-slate-800 rounded-lg border border-slate-300 shadow-md"
                               >
                                 Select finding {f.finding_id}
                               </button>
@@ -176,51 +209,64 @@ export function DocumentViewer({
                         </>
                       )}
                     </div>
-
-                    <div className="p-2 text-[11px] text-pastel-muted flex items-center justify-between border-t border-pastel-border bg-white">
-                      <span>Image Unit: {unit.unit_id}</span>
-                      <span>Coordinates: normalized [0.0 - 1.0]</span>
-                    </div>
-                  </div>
-                );
-              }
-
-              // 2. Heading or Text Units with Highlight Fallback
-              const hasFindings = unitFindings.length > 0;
-
-              return (
-                <div
-                  key={unit.unit_id}
-                  className={`p-3 rounded-lg transition-all relative ${
-                    isUnitSelected
-                      ? "bg-pastel-indigo-bg/40 border border-pastel-indigo-border ring-2 ring-pastel-indigo-border"
-                      : hasFindings
-                      ? "bg-pastel-bg/40 border border-pastel-border hover:bg-pastel-hover/50"
-                      : "hover:bg-pastel-hover/30"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1 text-[10px] text-pastel-muted">
-                    <span className="font-mono">{unit.unit_id}</span>
-                    {hasFindings && (
-                      <span className="font-semibold text-pastel-rose-text flex items-center gap-1">
-                        ● {unitFindings.length} issue{unitFindings.length === 1 ? "" : "s"}
-                      </span>
-                    )}
                   </div>
 
-                  {/* Text Rendering with precise span or block-level highlight */}
-                  <div className={`text-sm leading-relaxed ${unit.kind === "heading" ? "font-bold text-base text-pastel-text" : "text-pastel-text"}`}>
-                    <HighlightedUnitText
-                      unit={unit}
-                      findings={unitFindings}
-                      selectedFindingId={selectedFindingId}
-                      onSelectFinding={onSelectFinding}
-                    />
+                  <div className="p-3 bg-white text-xs text-slate-500 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      Visual WCAG Contrast Violation Detected
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-400">
+                      BBox: [1, 0.1, 0.48, 0.9, 0.78]
+                    </span>
                   </div>
                 </div>
               );
-            })}
-          </div>
+            }
+
+            // 2. Heading or Text Units with Highlight Fallback
+            const hasFindings = unitFindings.length > 0;
+
+            return (
+              <div
+                key={unit.unit_id}
+                className={`p-4 rounded-xl transition-all duration-150 relative ${
+                  isUnitSelected
+                    ? "bg-indigo-50/60 border border-indigo-200 ring-2 ring-indigo-500/20 shadow-sm"
+                    : hasFindings
+                    ? "bg-slate-50/70 border border-slate-200 hover:bg-slate-50"
+                    : "hover:bg-slate-50/50 border border-transparent"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2 text-xs text-slate-500">
+                  <span className="font-mono font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
+                    {unit.unit_id}
+                  </span>
+                  {hasFindings && (
+                    <span className="font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
+                      ● {unitFindings.length} issue{unitFindings.length === 1 ? "" : "s"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Text Rendering with precise span or block-level highlight */}
+                <div
+                  className={`leading-relaxed ${
+                    unit.kind === "heading"
+                      ? "font-bold text-lg text-slate-900 tracking-tight"
+                      : "text-slate-800 text-sm"
+                  }`}
+                >
+                  <HighlightedUnitText
+                    unit={unit}
+                    findings={unitFindings}
+                    selectedFindingId={selectedFindingId}
+                    onSelectFinding={onSelectFinding}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -258,14 +304,14 @@ function HighlightedUnitText({
     return (
       <mark
         onClick={() => onSelectFinding && onSelectFinding(activeFinding.finding_id)}
-        className="bg-pastel-rose-badge text-pastel-text border-b-2 border-pastel-rose-text px-1 py-0.5 rounded cursor-pointer transition-all hover:bg-pastel-rose-border block"
+        className="bg-rose-100/90 text-slate-900 border-b-2 border-rose-500 px-1.5 py-0.5 rounded cursor-pointer transition-all hover:bg-rose-200 block font-medium shadow-2xs"
       >
         {text}
       </mark>
     );
   }
 
-  // Precise text span highlight
+  // Precise text span highlight with clean padding and no descender clipping
   const before = text.slice(0, quoteIndex);
   const match = text.slice(quoteIndex, quoteIndex + quote.length);
   const after = text.slice(quoteIndex + quote.length);
@@ -279,10 +325,10 @@ function HighlightedUnitText({
           e.stopPropagation();
           if (onSelectFinding) onSelectFinding(activeFinding.finding_id);
         }}
-        className={`px-1 py-0.5 rounded font-medium cursor-pointer transition-all border-b-2 ${
+        className={`px-1.5 py-0.5 rounded cursor-pointer transition-all border-b-2 inline font-medium ${
           isSelected
-            ? "bg-pastel-rose-badge text-pastel-rose-text border-pastel-rose-text ring-2 ring-pastel-rose-border font-bold"
-            : "bg-pastel-amber-badge text-pastel-amber-text border-pastel-amber-text hover:bg-pastel-amber-border"
+            ? "bg-rose-100 text-rose-950 border-rose-600 ring-2 ring-rose-200 font-bold shadow-2xs"
+            : "bg-amber-100 text-amber-950 border-amber-500 hover:bg-amber-200"
         }`}
       >
         {match}

@@ -6,7 +6,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: "class", // Explicitly disabled from auto-switching with OS media
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -18,7 +18,6 @@ const config: Config = {
           muted: "#64748B",
           text: "#0F172A",
           subtext: "#334155",
-          // Soft Pastels with WCAG AA compliant text pairs
           green: {
             bg: "#ECFDF5",
             border: "#A7F3D0",
@@ -58,9 +57,9 @@ const config: Config = {
         },
       },
       boxShadow: {
-        pastel: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-        "pastel-md": "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
-        "pastel-lg": "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03)",
+        card: "0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04)",
+        "card-md": "0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.04)",
+        "card-lg": "0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04)",
       },
     },
   },
@@ -68,4 +67,3 @@ const config: Config = {
 };
 
 export default config;
-

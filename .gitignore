@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 prd.md
 .DS_Store
-.DS_Store
+storage/
+.pytest_cache/

@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import api.src.database as db_module
 from api.src.auth.dependencies import get_admin_db, get_db
 from api.src.auth.jwt import hash_password
 from api.src.database import Base
@@ -28,6 +29,12 @@ test_engine = create_engine(
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
+# Monkey-patch database SessionLocal so background tasks use test_engine
+db_module.SessionLocal = TestingSessionLocal
+db_module.AdminSessionLocal = TestingSessionLocal
+db_module.engine = test_engine
+db_module.admin_engine = test_engine
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
@@ -35,8 +42,8 @@ def setup_test_db():
 
     # Seed initial tenants and users for testing
     with TestingSessionLocal() as session:
-        t_meridian = Tenant(id="tenant_meridian", name="Meridian Flow")
-        t_acme = Tenant(id="tenant_acme", name="Acme Corporation")
+        t_meridian = Tenant(id="tenant_meridian", name="Meridian Flow", ruleset_version=1)
+        t_acme = Tenant(id="tenant_acme", name="Acme Corporation", ruleset_version=1)
         session.add_all([t_meridian, t_acme])
         session.flush()
 
@@ -56,6 +63,7 @@ def setup_test_db():
     yield
 
     Base.metadata.drop_all(bind=test_engine)
+
 
 
 @pytest.fixture

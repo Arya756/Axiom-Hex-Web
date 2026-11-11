@@ -198,11 +198,10 @@ export function DocumentViewer({
                               <button
                                 key={`btn-${f.finding_id}`}
                                 type="button"
-                                aria-label={`Select bounding box for ${f.type} finding`}
                                 onClick={() => onSelectFinding && onSelectFinding(f.finding_id)}
                                 className="sr-only pointer-events-auto focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-20 px-3 py-1.5 bg-white text-xs font-semibold text-slate-800 rounded-lg border border-slate-300 shadow-md"
                               >
-                                Select finding {f.finding_id}
+                                Select bounding box for {f.type} finding ({f.finding_id})
                               </button>
                             ))}
                           </div>

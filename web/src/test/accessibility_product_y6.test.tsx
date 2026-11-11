@@ -123,7 +123,7 @@ describe("Y6 Accessibility & Product Checks (PRD §5.4 & Y-27)", () => {
 
   it("passes axe-core WCAG 2.2 AA structural/ARIA check across Home workspace", async () => {
     const { container } = render(<Home />);
-    // Avoid multi-worker node-canvas Pango crashes on Linux CI while verifying full WCAG 2.2 AA DOM/ARIA rules
+    // Avoid color-contrast in jsdom while verifying all WCAG 2.2 AA structural/ARIA rules
     const results = await axe.run(container, {
       runOnly: {
         type: "tag",

@@ -113,7 +113,11 @@ describe("Y5 Ambiguity Radar, Impact Analysis & Recurring Insights", () => {
       </div>
     );
 
-    const results = await axe.run(container);
+    // Disable color-contrast in jsdom to avoid multi-worker node-canvas/Pango
+    // initialization races on Linux CI while still checking ARIA/semantic rules.
+    const results = await axe.run(container, {
+      rules: { "color-contrast": { enabled: false } },
+    });
     const severeViolations = results.violations.filter(
       (v) => v.impact === "critical" || v.impact === "serious"
     );

@@ -31,6 +31,7 @@ from contracts.models import (
     Sensitivity,
 )
 from engine.abstain import AbstainRouter
+from engine.accessibility import AccessibilityVisualChecker
 from engine.fact_ledger import RetrievalFailureError, TemporalFactLedger
 from engine.llm_client import LLMClient
 from engine.retrieval import HybridRetriever, get_default_retriever
@@ -104,6 +105,7 @@ class ReviewPipeline:
         terminology_checker: Optional[TerminologyChecker] = None,
         fact_ledger: Optional[TemporalFactLedger] = None,
         retriever: Optional[HybridRetriever] = None,
+        accessibility_checker: Optional[AccessibilityVisualChecker] = None,
         verifier: Optional[CitationVerifier] = None,
         abstain_router: Optional[AbstainRouter] = None,
     ) -> None:
@@ -111,6 +113,7 @@ class ReviewPipeline:
         self.terminology_checker = terminology_checker or TerminologyChecker()
         self.fact_ledger = fact_ledger or TemporalFactLedger()
         self.retriever = retriever  # None = lazy-loaded from default
+        self.accessibility_checker = accessibility_checker or AccessibilityVisualChecker()
         self.verifier = verifier or CitationVerifier()
         self.abstain_router = abstain_router or AbstainRouter()
 
@@ -133,7 +136,10 @@ class ReviewPipeline:
         # 4. Hybrid Retrieval (A-10) — enrich Unsupported findings with traces
         self._node_retrieval(state)
 
-        # 5. LLM Tone / Intent (A-06)
+        # 5. Accessibility & Visual checks (A-14, A-15, I2.1..I2.6)
+        self._node_accessibility_visual(state)
+
+        # 6. LLM Tone / Intent (A-06)
         self._node_llm(state)
 
         # 6. Citation Verifier (A-11)
@@ -229,6 +235,18 @@ class ReviewPipeline:
             state.add_progress("retrieval", RunNodeStatus.done, started_at=node_start)
         except Exception as ex:
             state.add_progress("retrieval", RunNodeStatus.failed, error=str(ex), started_at=node_start)
+            state.partial = True
+
+    def _node_accessibility_visual(self, state: ReviewState) -> None:
+        """Execute multimodal accessibility and visual brand checks (A-14, A-15)."""
+        node_start = datetime.utcnow()
+        try:
+            findings, sources = self.accessibility_checker.check_units(state.units, state.policy)
+            state.findings.extend(findings)
+            state.matched_sources.update(sources)
+            state.add_progress("accessibility_visual", RunNodeStatus.done, started_at=node_start)
+        except Exception as ex:
+            state.add_progress("accessibility_visual", RunNodeStatus.failed, error=str(ex), started_at=node_start)
             state.partial = True
 
     def _node_llm(self, state: ReviewState) -> None:

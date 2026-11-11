@@ -1,6 +1,16 @@
 """Axiom Multimodal Automated Review Engine."""
 
 from engine.abstain import AbstainRouter, apply_needs_judgment, process_findings, route_to_for_type
+from engine.accessibility import (
+    AccessibilityVisualChecker,
+    ContrastChecker,
+    OCRValidator,
+    PaletteChecker,
+    StructureChecker,
+    calculate_ciede2000_delta_e,
+    calculate_contrast_ratio,
+    calculate_relative_luminance,
+)
 from engine.compiler import GuidelineCompiler, compile
 from engine.fact_ledger import ExtractedClaim, RetrievalFailureError, TemporalFactLedger
 from engine.llm_client import LLMClient, LLMResponse, PolicyViolationError
@@ -35,4 +45,12 @@ __all__ = [
     "get_default_retriever",
     "TerminologyChecker",
     "CitationVerifier",
+    "AccessibilityVisualChecker",
+    "ContrastChecker",
+    "PaletteChecker",
+    "StructureChecker",
+    "OCRValidator",
+    "calculate_contrast_ratio",
+    "calculate_ciede2000_delta_e",
+    "calculate_relative_luminance",
 ]

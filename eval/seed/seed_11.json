@@ -1,0 +1,20 @@
+{
+  "id": "seed_11",
+  "category": "clean",
+  "description": "Fully compliant text — no violations, false-positive baseline",
+  "text": "Meridian Flow helps over 25,000+ customers automate brand governance with 99.95% uptime. Contact our team to get started today.",
+  "revision_id": "rev_seed_11",
+  "units": [
+    {
+      "unit_id": "u_seed_11_1",
+      "revision_id": "rev_seed_11",
+      "kind": "paragraph",
+      "text": "Meridian Flow helps over 25,000+ customers automate brand governance with 99.95% uptime. Contact our team to get started today.",
+      "start": 0,
+      "end": 125,
+      "page": 1
+    }
+  ],
+  "expected_findings": []
+}
+

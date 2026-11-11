@@ -1,0 +1,32 @@
+{
+  "id": "seed_01",
+  "category": "violation",
+  "description": "Banned term G-01: 'MFP' used instead of 'Meridian Flow'",
+  "text": "Our MFP platform streamlines brand governance for enterprise teams with real-time compliance checks.",
+  "revision_id": "rev_seed_01",
+  "units": [
+    {
+      "unit_id": "u_seed_01_1",
+      "revision_id": "rev_seed_01",
+      "kind": "paragraph",
+      "text": "Our MFP platform streamlines brand governance for enterprise teams with real-time compliance checks.",
+      "start": 0,
+      "end": 99,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "terminology",
+      "span": {
+        "unit_id": "u_seed_01_1",
+        "start": 4,
+        "end": 7,
+        "quote": "MFP"
+      },
+      "source": "G-01",
+      "rule": "R-01"
+    }
+  ]
+}
+

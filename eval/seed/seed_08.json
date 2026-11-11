@@ -1,0 +1,32 @@
+{
+  "id": "seed_08",
+  "category": "unsupported",
+  "description": "Absolute claim 'fastest governance tool' — no approved fact supports this",
+  "text": "Built as the fastest governance tool in the market, Meridian Flow helps teams ship compliant content 3x faster.",
+  "revision_id": "rev_seed_08",
+  "units": [
+    {
+      "unit_id": "u_seed_08_1",
+      "revision_id": "rev_seed_08",
+      "kind": "paragraph",
+      "text": "Built as the fastest governance tool in the market, Meridian Flow helps teams ship compliant content 3x faster.",
+      "start": 0,
+      "end": 110,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "unsupported",
+      "span": {
+        "unit_id": "u_seed_08_1",
+        "start": 13,
+        "end": 50,
+        "quote": "fastest governance tool in the market"
+      },
+      "source": "R-04",
+      "rule": "R-04"
+    }
+  ]
+}
+

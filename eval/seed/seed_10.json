@@ -1,0 +1,41 @@
+{
+  "id": "seed_10",
+  "category": "visual",
+  "description": "WCAG contrast failure: #999999 on white (#FFFFFF) = 2.85:1, needs 4.5:1",
+  "text": "Caption text styled in grey (#999999) on a white background fails WCAG AA contrast at 2.85:1.",
+  "revision_id": "rev_seed_10",
+  "units": [
+    {
+      "unit_id": "u_seed_10_1",
+      "revision_id": "rev_seed_10",
+      "kind": "paragraph",
+      "text": "Caption text styled in grey (#999999) on a white background fails WCAG AA contrast at 2.85:1.",
+      "start": 0,
+      "end": 93,
+      "page": 1,
+      "style": {
+        "color": "#999999",
+        "background": "#FFFFFF",
+        "font_size": 10,
+        "bold": false
+      },
+      "bbox": {"page": 1, "x0": 0.0, "y0": 0.9, "x1": 1.0, "y1": 0.95}
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "visual_contrast",
+      "measured_ratio": 2.85,
+      "threshold": 4.5,
+      "fg_hex": "#999999",
+      "bg_hex": "#FFFFFF",
+      "span": {
+        "unit_id": "u_seed_10_1",
+        "start": 0,
+        "end": 93,
+        "quote": "Caption text styled in grey (#999999) on a white background fails WCAG AA contrast at 2.85:1."
+      }
+    }
+  ]
+}
+

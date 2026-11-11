@@ -1,0 +1,32 @@
+{
+  "id": "seed_09",
+  "category": "needs_judgment",
+  "description": "Passive hedged tone — may need judgment on confidence/assertiveness",
+  "text": "Meridian Flow could potentially help organisations that might want to explore brand consistency improvements in certain scenarios.",
+  "revision_id": "rev_seed_09",
+  "units": [
+    {
+      "unit_id": "u_seed_09_1",
+      "revision_id": "rev_seed_09",
+      "kind": "paragraph",
+      "text": "Meridian Flow could potentially help organisations that might want to explore brand consistency improvements in certain scenarios.",
+      "start": 0,
+      "end": 127,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "needs_judgment",
+      "span": {
+        "unit_id": "u_seed_09_1",
+        "start": 0,
+        "end": 127,
+        "quote": "Meridian Flow could potentially help organisations that might want to explore brand consistency improvements in certain scenarios."
+      },
+      "source": "R-07",
+      "rule": "R-07"
+    }
+  ]
+}
+

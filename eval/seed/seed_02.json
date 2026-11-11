@@ -1,0 +1,32 @@
+{
+  "id": "seed_02",
+  "category": "violation",
+  "description": "Banned term G-03: 'brand policing' used in content",
+  "text": "Meridian Flow goes beyond brand policing to empower teams with intelligent governance automation.",
+  "revision_id": "rev_seed_02",
+  "units": [
+    {
+      "unit_id": "u_seed_02_1",
+      "revision_id": "rev_seed_02",
+      "kind": "paragraph",
+      "text": "Meridian Flow goes beyond brand policing to empower teams with intelligent governance automation.",
+      "start": 0,
+      "end": 95,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "terminology",
+      "span": {
+        "unit_id": "u_seed_02_1",
+        "start": 27,
+        "end": 42,
+        "quote": "brand policing"
+      },
+      "source": "G-03",
+      "rule": "R-01"
+    }
+  ]
+}
+

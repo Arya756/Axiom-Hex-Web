@@ -1,0 +1,32 @@
+{
+  "id": "seed_04",
+  "category": "contradicted",
+  "description": "Claims 99.5% uptime — contradicts F-108 v2 (99.95%)",
+  "text": "Our platform delivers an industry-leading 99.5% uptime SLA, ensuring your teams are never blocked.",
+  "revision_id": "rev_seed_04",
+  "units": [
+    {
+      "unit_id": "u_seed_04_1",
+      "revision_id": "rev_seed_04",
+      "kind": "paragraph",
+      "text": "Our platform delivers an industry-leading 99.5% uptime SLA, ensuring your teams are never blocked.",
+      "start": 0,
+      "end": 97,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "contradicted",
+      "span": {
+        "unit_id": "u_seed_04_1",
+        "start": 42,
+        "end": 47,
+        "quote": "99.5%"
+      },
+      "source": "F-108",
+      "rule": "R-03"
+    }
+  ]
+}
+

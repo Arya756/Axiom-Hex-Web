@@ -1,0 +1,629 @@
+{
+  "run_timestamp": "2026-11-11T03:23:31Z",
+  "total_items": 48,
+  "elapsed_seconds": 0.1,
+  "citation_rate": 1.0,
+  "verifier_drop_rate": 0.0,
+  "total_findings_emitted": 41,
+  "category_recall": [
+    {
+      "category": "violation",
+      "items": 8,
+      "detected": 8,
+      "recall": 1.0
+    },
+    {
+      "category": "contradicted",
+      "items": 6,
+      "detected": 6,
+      "recall": 1.0
+    },
+    {
+      "category": "outdated",
+      "items": 8,
+      "detected": 8,
+      "recall": 1.0
+    },
+    {
+      "category": "unsupported",
+      "items": 6,
+      "detected": 6,
+      "recall": 1.0
+    },
+    {
+      "category": "needs_judgment",
+      "items": 4,
+      "detected": 4,
+      "recall": 1.0
+    },
+    {
+      "category": "visual",
+      "items": 6,
+      "detected": 6,
+      "recall": 1.0
+    },
+    {
+      "category": "clean",
+      "items": 6,
+      "detected": 6,
+      "recall": 1.0
+    },
+    {
+      "category": "injection",
+      "items": 4,
+      "detected": 4,
+      "recall": 1.0
+    }
+  ],
+  "clean_fp_rate": 0.0,
+  "restricted_mode_external_calls": 0,
+  "llm_variance_runs": 3,
+  "llm_run_finding_counts": [
+    11,
+    11,
+    11
+  ],
+  "llm_mean": 11.0,
+  "llm_variance": 0.0,
+  "outdated_recall_pass": true,
+  "results": [
+    {
+      "id": "seed_01_mut01",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_01_mut02",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_01_mut03",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_01_mut04",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_02_mut01",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_02_mut02",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_02_mut03",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_02_mut04",
+      "category": "violation",
+      "findings": [
+        "terminology"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_03_mut01",
+      "category": "contradicted",
+      "findings": [
+        "contradicted"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_03_mut02",
+      "category": "contradicted",
+      "findings": [
+        "contradicted"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_03_mut03",
+      "category": "contradicted",
+      "findings": [
+        "contradicted"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_04_mut01",
+      "category": "contradicted",
+      "findings": [
+        "contradicted"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_04_mut02",
+      "category": "contradicted",
+      "findings": [
+        "contradicted"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_04_mut03",
+      "category": "contradicted",
+      "findings": [
+        "contradicted"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_05_mut01",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_05_mut02",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_05_mut03",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_05_mut04",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_06_mut01",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_06_mut02",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_06_mut03",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_06_mut04",
+      "category": "outdated",
+      "findings": [
+        "outdated"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_07_mut01",
+      "category": "unsupported",
+      "findings": [
+        "unsupported"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_07_mut02",
+      "category": "unsupported",
+      "findings": [
+        "unsupported"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_07_mut03",
+      "category": "unsupported",
+      "findings": [
+        "unsupported"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_08_mut01",
+      "category": "unsupported",
+      "findings": [
+        "unsupported"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_08_mut02",
+      "category": "unsupported",
+      "findings": [
+        "unsupported"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_08_mut03",
+      "category": "unsupported",
+      "findings": [
+        "unsupported"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_09_mut01",
+      "category": "needs_judgment",
+      "findings": [
+        "tone"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_09_mut02",
+      "category": "needs_judgment",
+      "findings": [
+        "tone"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_09_mut03",
+      "category": "needs_judgment",
+      "findings": [
+        "tone"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_09_mut04",
+      "category": "needs_judgment",
+      "findings": [
+        "tone",
+        "tone"
+      ],
+      "finding_count": 2,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_10_mut01",
+      "category": "visual",
+      "findings": [
+        "visual",
+        "accessibility"
+      ],
+      "finding_count": 2,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_10_mut02",
+      "category": "visual",
+      "findings": [
+        "visual"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_10_mut03",
+      "category": "visual",
+      "findings": [
+        "visual",
+        "accessibility"
+      ],
+      "finding_count": 2,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_10_mut04",
+      "category": "visual",
+      "findings": [
+        "visual"
+      ],
+      "finding_count": 1,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_10_mut05",
+      "category": "visual",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_10_mut06",
+      "category": "visual",
+      "findings": [
+        "visual",
+        "accessibility"
+      ],
+      "finding_count": 2,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_11_mut01",
+      "category": "clean",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_11_mut02",
+      "category": "clean",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_11_mut03",
+      "category": "clean",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_11_mut04",
+      "category": "clean",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_11_mut05",
+      "category": "clean",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_11_mut06",
+      "category": "clean",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_12_mut01",
+      "category": "injection",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_12_mut02",
+      "category": "injection",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_12_mut03",
+      "category": "injection",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    },
+    {
+      "id": "seed_12_mut04",
+      "category": "injection",
+      "findings": [],
+      "finding_count": 0,
+      "external_calls": 1,
+      "disclosures": 1,
+      "partial": false,
+      "error": null
+    }
+  ]
+}

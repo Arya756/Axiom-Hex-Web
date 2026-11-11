@@ -1,0 +1,32 @@
+{
+  "id": "seed_03",
+  "category": "contradicted",
+  "description": "Claims 50,000+ customers — contradicts F-112 v3 (25,000+)",
+  "text": "Meridian Flow serves over 50,000+ customers worldwide, helping brands maintain compliance at scale.",
+  "revision_id": "rev_seed_03",
+  "units": [
+    {
+      "unit_id": "u_seed_03_1",
+      "revision_id": "rev_seed_03",
+      "kind": "paragraph",
+      "text": "Meridian Flow serves over 50,000+ customers worldwide, helping brands maintain compliance at scale.",
+      "start": 0,
+      "end": 97,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "contradicted",
+      "span": {
+        "unit_id": "u_seed_03_1",
+        "start": 25,
+        "end": 33,
+        "quote": "50,000+"
+      },
+      "source": "F-112",
+      "rule": "R-03"
+    }
+  ]
+}
+

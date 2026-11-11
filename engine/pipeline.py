@@ -33,9 +33,11 @@ from contracts.models import (
 from engine.abstain import AbstainRouter
 from engine.accessibility import AccessibilityVisualChecker
 from engine.fact_ledger import RetrievalFailureError, TemporalFactLedger
+from engine.intent_card import extract_intent_card, generate_minimal_fix
 from engine.llm_client import LLMClient
 from engine.retrieval import HybridRetriever, get_default_retriever
 from engine.terminology import TerminologyChecker
+from engine.tone import ToneChecker
 from engine.verifier import CitationVerifier
 
 
@@ -106,6 +108,7 @@ class ReviewPipeline:
         fact_ledger: Optional[TemporalFactLedger] = None,
         retriever: Optional[HybridRetriever] = None,
         accessibility_checker: Optional[AccessibilityVisualChecker] = None,
+        tone_checker: Optional[ToneChecker] = None,
         verifier: Optional[CitationVerifier] = None,
         abstain_router: Optional[AbstainRouter] = None,
     ) -> None:
@@ -114,6 +117,7 @@ class ReviewPipeline:
         self.fact_ledger = fact_ledger or TemporalFactLedger()
         self.retriever = retriever  # None = lazy-loaded from default
         self.accessibility_checker = accessibility_checker or AccessibilityVisualChecker()
+        self.tone_checker = tone_checker or ToneChecker()
         self.verifier = verifier or CitationVerifier()
         self.abstain_router = abstain_router or AbstainRouter()
 
@@ -168,8 +172,11 @@ class ReviewPipeline:
     # -----------------------------------------------------------------------
 
     def _node_router(self, state: ReviewState) -> None:
-        """Validate run parameters and enforce sensitivity policy."""
-        state.add_progress("router", RunNodeStatus.done)
+        """Validate run parameters, enforce sensitivity policy, and auto-extract Intent Card (A-13)."""
+        node_start = datetime.utcnow()
+        if state.intent_card is None:
+            state.intent_card = extract_intent_card(state.units)
+        state.add_progress("router", RunNodeStatus.done, started_at=node_start)
 
     def _node_terminology(self, state: ReviewState) -> None:
         """Execute deterministic banned-term and product-name casing checks (A-08)."""
@@ -250,8 +257,17 @@ class ReviewPipeline:
             state.partial = True
 
     def _node_llm(self, state: ReviewState) -> None:
-        """Execute LLM tone / intent checks with strict policy enforcement (A-06)."""
+        """Execute tone checker (A-16) and LLM checks with strict policy enforcement (A-06)."""
         node_start = datetime.utcnow()
+
+        # 1. Deterministic tone checker (A-16): sentence stats + rubric/exemplar comparison
+        tone_findings = self.tone_checker.check_units(state.units)
+        for tf in tone_findings:
+            state.findings.append(tf)
+            for ev in tf.evidence:
+                state.matched_sources.add(ev.source)
+            if tf.rule_id:
+                state.matched_sources.add(tf.rule_id)
 
         # Restricted runs make ZERO external calls
         if state.policy == Sensitivity.restricted:
@@ -351,8 +367,27 @@ class ReviewPipeline:
             state.partial = True
 
     def _node_aggregator(self, state: ReviewState) -> None:
-        """Final aggregation and deduplication."""
+        """Final aggregation, deduplication, and minimal-edit fix generation (A-13, G3, T9)."""
         node_start = datetime.utcnow()
+        units_by_id = {u.unit_id: u for u in state.units}
+        updated_findings: List[Finding] = []
+        seen_ids: Set[str] = set()
+
+        for f in state.findings:
+            if f.finding_id in seen_ids:
+                continue
+            seen_ids.add(f.finding_id)
+
+            # Generate or verify minimal fix
+            if f.suggested_fix is None or not f.suggested_fix.rechecked:
+                unit = units_by_id.get(f.span.unit_id)
+                if unit:
+                    fix = generate_minimal_fix(f, unit, state.intent_card, state.policy)
+                    if fix:
+                        f = f.model_copy(update={"suggested_fix": fix})
+            updated_findings.append(f)
+
+        state.findings = updated_findings
         state.add_progress("aggregator", RunNodeStatus.done, started_at=node_start)
 
 

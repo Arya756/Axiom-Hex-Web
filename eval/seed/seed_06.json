@@ -1,0 +1,32 @@
+{
+  "id": "seed_06",
+  "category": "outdated",
+  "description": "Claims 99.9% uptime — matches F-108 v1, superseded by v2 (99.95%)",
+  "text": "Meridian Flow guarantees 99.9% uptime for all enterprise customers, backed by our SLA commitment.",
+  "revision_id": "rev_seed_06",
+  "units": [
+    {
+      "unit_id": "u_seed_06_1",
+      "revision_id": "rev_seed_06",
+      "kind": "paragraph",
+      "text": "Meridian Flow guarantees 99.9% uptime for all enterprise customers, backed by our SLA commitment.",
+      "start": 0,
+      "end": 96,
+      "page": 1
+    }
+  ],
+  "expected_findings": [
+    {
+      "type": "outdated",
+      "span": {
+        "unit_id": "u_seed_06_1",
+        "start": 25,
+        "end": 30,
+        "quote": "99.9%"
+      },
+      "source": "F-108",
+      "rule": "R-03"
+    }
+  ]
+}
+

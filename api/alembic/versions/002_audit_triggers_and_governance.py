@@ -1,6 +1,6 @@
 """Add PostgreSQL append-only triggers on audit_log and governance columns.
 
-Revision ID: 002_audit_triggers_and_governance
+Revision ID: 002_audit_governance
 Revises: 001_initial_schema
 Create Date: 2026-11-11 00:00:00.000000
 """
@@ -10,7 +10,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "002_audit_triggers_and_governance"
+revision: str = "002_audit_governance"
 down_revision: Union[str, None] = "001_initial_schema"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

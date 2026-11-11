@@ -37,7 +37,7 @@ import { DocumentViewer } from "../components/viewer/DocumentViewer";
 import { ReviewerQueue } from "../components/reviewer/ReviewerQueue";
 import { AmbiguityRadar } from "../components/insights/AmbiguityRadar";
 import { RecurringInsightsDashboard } from "../components/insights/RecurringInsightsDashboard";
-import { CheckCircle2, Sparkles, Info, UploadCloud, Compass, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { CheckCircle2, Sparkles, Info, UploadCloud, Compass, ChevronDown, ChevronUp, FileText, AlertCircle, Loader2 } from "lucide-react";
 
 export default function Home() {
   const [currentRole, setCurrentRole] = useState<UserRole>("creator");
@@ -52,7 +52,7 @@ export default function Home() {
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>("f_81c2");
   const [runProgress, setRunProgress] = useState<ReviewRunProgress | null>(null);
   const [findingFilter, setFindingFilter] = useState<string>("all");
-  const [statusBanner, setStatusBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
+  const [statusBanner, setStatusBanner] = useState<{ message: string; type: "success" | "info" | "error" } | null>(null);
   const [radarData] = useState<RadarData>(SEEDED_RADAR_DATA);
   const [recurringInsights] = useState<RecurringInsightsData>(SEEDED_RECURRING_INSIGHTS);
   const [activeImpact, setActiveImpact] = useState<ImpactAnalysisData | null>(null);
@@ -328,26 +328,41 @@ export default function Home() {
         {/* WCAG 2.2 AA Partial Coverage Disclosure Banner */}
         <AxeDisclosure />
 
-        {/* Global Status Banner */}
+        {/* Global Status / Error Banner */}
         {statusBanner && (
           <div
-            role="status"
-            className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-center gap-3 shadow-sm transition-all duration-200 ${
-              statusBanner.type === "success"
+            role={statusBanner.type === "error" ? "alert" : "status"}
+            className={`p-4 rounded-2xl border text-xs sm:text-sm flex items-center justify-between gap-3 shadow-sm transition-all duration-200 ${
+              statusBanner.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-900"
+                : statusBanner.type === "success"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                 : "bg-indigo-50 border-indigo-200 text-indigo-900"
             }`}
           >
-            {statusBanner.type === "success" ? (
-              <div className="p-1 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            ) : (
-              <div className="p-1 rounded-full bg-indigo-100 text-indigo-700 flex-shrink-0">
-                <Info className="w-4 h-4" />
-              </div>
-            )}
-            <span className="font-semibold">{statusBanner.message}</span>
+            <div className="flex items-center gap-3">
+              {statusBanner.type === "error" ? (
+                <div className="p-1 rounded-full bg-rose-100 text-rose-700 flex-shrink-0">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              ) : statusBanner.type === "success" ? (
+                <div className="p-1 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              ) : (
+                <div className="p-1 rounded-full bg-indigo-100 text-indigo-700 flex-shrink-0">
+                  <Info className="w-4 h-4" />
+                </div>
+              )}
+              <span className="font-semibold">{statusBanner.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusBanner(null)}
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-current/20 hover:bg-white/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -495,21 +510,66 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Explicit Loading State */}
+                {runProgress?.status === "running" && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 flex items-center gap-3 text-xs text-indigo-900 shadow-sm"
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-600 flex-shrink-0" aria-hidden="true" />
+                    <div>
+                      <p className="font-bold">Analyzing revision ({runProgress.progress}%)</p>
+                      <p className="text-indigo-700">{runProgress.active_step || "Running verification checkers..."}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Cards List */}
                 <div className="space-y-3.5" role="region" aria-label="Evidence-first finding cards list">
-                  {filteredFindings.map((finding) => (
+                  {filteredFindings.map((finding, index) => (
                     <FindingCard
                       key={finding.finding_id}
                       finding={finding}
                       isSelected={finding.finding_id === selectedFindingId}
                       onSelect={(f) => handleSelectFinding(f.finding_id)}
+                      onNavigate={(dir) => {
+                        const targetIndex =
+                          dir === "next"
+                            ? Math.min(filteredFindings.length - 1, index + 1)
+                            : Math.max(0, index - 1);
+                        const nextFinding = filteredFindings[targetIndex];
+                        if (nextFinding) {
+                          handleSelectFinding(nextFinding.finding_id);
+                          const el = document.querySelector<HTMLElement>(
+                            `[data-finding-id="${nextFinding.finding_id}"]`
+                          );
+                          el?.focus();
+                        }
+                      }}
                       onDecision={handleDecision}
                       onEditFix={handleEditFix}
                     />
                   ))}
                   {filteredFindings.length === 0 && (
-                    <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-500 shadow-sm">
-                      No findings match the selected filter.
+                    <div
+                      role="status"
+                      className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-600 shadow-sm space-y-3"
+                    >
+                      <p className="font-semibold text-slate-800">
+                        {findings.length === 0
+                          ? "No compliance findings reported for this draft."
+                          : "No findings match the selected filter."}
+                      </p>
+                      {findings.length > 0 && findingFilter !== "all" && (
+                        <button
+                          type="button"
+                          onClick={() => setFindingFilter("all")}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        >
+                          Reset Filter
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

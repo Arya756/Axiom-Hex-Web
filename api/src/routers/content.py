@@ -9,11 +9,13 @@ from sqlalchemy.orm import Session
 from api.src.auth.dependencies import get_current_user, get_db
 from api.src.models.content import Content, Revision
 from api.src.models.user import User
+from api.src.services.governance import append_audit_log
 from api.src.services.storage import compute_sha256, save_upload_file, validate_file
 
 router = APIRouter(prefix="/content", tags=["content"])
 
 VALID_SENSITIVITIES = {"public", "internal", "restricted"}
+INVALIDATED_NEW_STATUS = "Invalidated (New Unapproved Revision)"
 
 
 class RevisionResponse(BaseModel):
@@ -22,6 +24,7 @@ class RevisionResponse(BaseModel):
     version_num: int
     content_hash: str
     raw_text: Optional[str] = None
+    created_by: Optional[str] = None
     status: str
     approval_status: str
     created_at: datetime
@@ -87,10 +90,41 @@ async def create_content(
         version_num=1,
         content_hash=content_hash,
         raw_text=raw_text,
+        created_by=current_user.id,
         status="draft",
         approval_status="pending",
     )
     db.add(revision)
+    db.flush()
+
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="content",
+        entity_id=content.id,
+        action="content.created",
+        payload={
+            "title": content.title,
+            "revision_id": revision.id,
+            "content_hash": content_hash,
+            "sensitivity": content.sensitivity,
+            "created_by": current_user.id,
+        },
+    )
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="revision",
+        entity_id=revision.id,
+        action="revision.created",
+        payload={
+            "content_id": content.id,
+            "version_num": 1,
+            "content_hash": content_hash,
+            "status": revision.status,
+            "created_by": current_user.id,
+        },
+    )
     db.commit()
 
     return ContentResponse(
@@ -109,6 +143,7 @@ async def create_content(
                 version_num=revision.version_num,
                 content_hash=revision.content_hash,
                 raw_text=revision.raw_text,
+                created_by=revision.created_by,
                 status=revision.status,
                 approval_status=revision.approval_status,
                 created_at=revision.created_at,
@@ -157,6 +192,12 @@ async def create_revision(
     if ext in {".txt", ".md", ".markdown"}:
         raw_text = file_bytes.decode("utf-8", errors="ignore")
 
+    was_approved = bool(
+        latest_rev
+        and (latest_rev.approval_status == "approved" or latest_rev.status == "approved")
+    )
+    new_status = INVALIDATED_NEW_STATUS if was_approved else "draft"
+
     revision = Revision(
         id=revision_id,
         tenant_id=tenant_id,
@@ -164,14 +205,45 @@ async def create_revision(
         version_num=next_ver,
         content_hash=content_hash,
         raw_text=raw_text,
-        status="draft",
+        created_by=current_user.id,
+        status=new_status,
         approval_status="pending",
     )
     db.add(revision)
 
-    # If previous revision was approved, mark it superseded/invalidated
-    if latest_rev and latest_rev.approval_status == "approved":
+    # If previous revision was approved, mark it superseded/invalidated (Y-11)
+    if was_approved and latest_rev is not None:
         latest_rev.status = "invalidated"
+        latest_rev.approval_status = "invalidated"
+        append_audit_log(
+            db=db,
+            tenant_id=tenant_id,
+            entity_type="revision",
+            entity_id=latest_rev.id,
+            action="revision.invalidated",
+            payload={
+                "content_id": content_id,
+                "superseded_by": revision.id,
+                "previous_hash": latest_rev.content_hash,
+                "new_hash": content_hash,
+                "actor_id": current_user.id,
+            },
+        )
+
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="revision",
+        entity_id=revision.id,
+        action="revision.created",
+        payload={
+            "content_id": content_id,
+            "version_num": next_ver,
+            "content_hash": content_hash,
+            "status": new_status,
+            "created_by": current_user.id,
+        },
+    )
 
     db.commit()
 
@@ -181,6 +253,7 @@ async def create_revision(
         version_num=revision.version_num,
         content_hash=revision.content_hash,
         raw_text=revision.raw_text,
+        created_by=revision.created_by,
         status=revision.status,
         approval_status=revision.approval_status,
         created_at=revision.created_at,

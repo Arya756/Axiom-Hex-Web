@@ -14,6 +14,13 @@ from api.src.models.content import Content, Revision
 from api.src.models.review import Comment, FindingModel, ReviewRun
 from api.src.models.tenant import Tenant
 from api.src.models.user import User
+from api.src.models.workflow import Approval
+from api.src.services.governance import (
+    CLAIM_FINDING_TYPES,
+    append_audit_log,
+    record_usage_entries,
+    route_finding_by_type,
+)
 from contracts import (
     ContentUnit,
     IntentCard as IntentCardContract,
@@ -26,6 +33,8 @@ from contracts import (
 router = APIRouter(prefix="/revisions", tags=["revisions"])
 
 STALE_RUN_TIMEOUT_SECONDS = 300  # 5 minutes
+INVALIDATED_NEW_STATUS = "Invalidated (New Unapproved Revision)"
+APPROVER_ROLES = {"reviewer", "legal_reviewer", "admin"}
 
 
 class IntentCardPayload(BaseModel):
@@ -89,6 +98,54 @@ class CommentResponse(BaseModel):
     created_at: datetime
 
 
+class ApproveRequest(BaseModel):
+    content_hash: str
+    comment: Optional[str] = None
+
+
+class ApprovalResponse(BaseModel):
+    id: str
+    revision_id: str
+    approver_id: str
+    content_hash: str
+    revision_status: str
+    approval_status: str
+    approved_at: datetime
+    idempotent: bool = False
+
+
+class EditRevisionRequest(BaseModel):
+    raw_text: str
+    comment: Optional[str] = None
+
+
+class EditRevisionResponse(BaseModel):
+    id: str
+    content_id: str
+    version_num: int
+    content_hash: str
+    raw_text: Optional[str] = None
+    created_by: Optional[str] = None
+    status: str
+    approval_status: str
+    previous_revision_id: str
+    previous_status: str
+    created_at: datetime
+
+
+class RequestChangesPayload(BaseModel):
+    reason: str
+    comment: Optional[str] = None
+
+
+class RequestChangesResponse(BaseModel):
+    revision_id: str
+    status: str
+    approval_status: str
+    requested_by: str
+    reason: str
+
+
 def _compute_cache_key(
     tenant_id: str,
     content_hash: str,
@@ -145,6 +202,12 @@ def execute_review_run_task(
         db.commit()
 
         try:
+            tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+            enforce_no_external = bool(tenant and tenant.no_external_processing)
+            effective_sensitivity = (
+                "restricted" if enforce_no_external else sensitivity_str
+            )
+
             # 1. Parse or construct ContentUnits
             text_content = revision.raw_text or "Sample content unit placeholder"
             units = [
@@ -166,12 +229,15 @@ def execute_review_run_task(
             result: ReviewResult = run_review(
                 revision_units=units,
                 ruleset_version=ruleset_version,
-                policy=Sensitivity(sensitivity_str),
+                policy=Sensitivity(effective_sensitivity),
                 intent_card=intent_card_contract,
             )
 
             # 3. Only API writes workflow tables (T1 contract requirement)
             for f in result.findings:
+                routed_role = route_finding_by_type(
+                    f.type.value, abstained=f.abstained
+                )
                 finding_model = FindingModel(
                     finding_id=f.finding_id,
                     tenant_id=tenant_id,
@@ -184,7 +250,7 @@ def execute_review_run_task(
                     evidence_json=[e.model_dump() for e in f.evidence],
                     explanation=f.explanation,
                     suggested_fix_json=f.suggested_fix.model_dump() if f.suggested_fix else None,
-                    route_to=f.route_to,
+                    route_to=routed_role,
                     status=f.status.value,
                     abstained=f.abstained,
                     rule_id=f.rule_id,
@@ -192,12 +258,34 @@ def execute_review_run_task(
                 )
                 db.add(finding_model)
 
+            record_usage_entries(
+                db=db,
+                tenant_id=tenant_id,
+                run_id=run.id,
+                sensitivity=effective_sensitivity,
+                result=result,
+                enforce_no_external=enforce_no_external,
+            )
+
             run.status = "partial" if result.partial else "done"
             run.partial = result.partial
             run.matched_sources = result.matched_sources
             run.run_progress = [p.model_dump(mode="json") for p in result.run_progress]
             run.finished_at = datetime.now(timezone.utc)
             revision.status = "in_review"
+            append_audit_log(
+                db=db,
+                tenant_id=tenant_id,
+                entity_type="review_run",
+                entity_id=run.id,
+                action="review_run.completed",
+                payload={
+                    "revision_id": revision.id,
+                    "sensitivity": effective_sensitivity,
+                    "partial": result.partial,
+                    "findings_count": len(result.findings),
+                },
+            )
             db.commit()
 
         except Exception as e:
@@ -233,6 +321,8 @@ def trigger_review_run(
     sensitivity = (payload.sensitivity or (content.sensitivity if content else "internal")).lower()
 
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if tenant and tenant.no_external_processing:
+        sensitivity = "restricted"
     ruleset_version = tenant.ruleset_version if tenant else 1
 
     # Stale run watchdog
@@ -320,10 +410,11 @@ def trigger_review_run(
 @router.get("/{revision_id}/findings", response_model=List[FindingResponse])
 def get_revision_findings(
     revision_id: str,
+    route_to: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returns all findings for the given revision."""
+    """Returns all findings for the given revision, optionally filtered by routed role queue."""
     tenant_id = current_user.tenant_id
     revision = (
         db.query(Revision)
@@ -336,11 +427,13 @@ def get_revision_findings(
             detail=f"Revision '{revision_id}' not found",
         )
 
-    findings = (
-        db.query(FindingModel)
-        .filter(FindingModel.revision_id == revision_id, FindingModel.tenant_id == tenant_id)
-        .all()
+    query = db.query(FindingModel).filter(
+        FindingModel.revision_id == revision_id,
+        FindingModel.tenant_id == tenant_id,
     )
+    if route_to:
+        query = query.filter(FindingModel.route_to == route_to.strip())
+    findings = query.all()
 
     return [
         FindingResponse(
@@ -414,6 +507,18 @@ def create_comment(
         span_json=payload.span,
     )
     db.add(comment)
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="comment",
+        entity_id=comment.id,
+        action="comment.created",
+        payload={
+            "revision_id": revision_id,
+            "finding_id": payload.finding_id,
+            "user_id": current_user.id,
+        },
+    )
     db.commit()
 
     return CommentResponse(
@@ -453,3 +558,335 @@ def get_comments(
         )
         for c in comments
     ]
+
+
+@router.post("/{revision_id}/approve", response_model=ApprovalResponse)
+def approve_revision(
+    revision_id: str,
+    payload: ApproveRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Hash-bound idempotent revision approval enforcing SoD and mandatory legal sign-off (Y-11, Y-13)."""
+    tenant_id = current_user.tenant_id
+
+    revision = (
+        db.query(Revision)
+        .filter(Revision.id == revision_id, Revision.tenant_id == tenant_id)
+        .first()
+    )
+    if not revision:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Revision '{revision_id}' not found",
+        )
+
+    if current_user.role not in APPROVER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Role '{current_user.role}' is not permitted to approve revisions",
+        )
+
+    content = (
+        db.query(Content)
+        .filter(Content.id == revision.content_id, Content.tenant_id == tenant_id)
+        .first()
+    )
+    author_id = revision.created_by or (content.created_by if content else None)
+    if author_id and current_user.id == author_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Separation of duties violation: authors cannot approve their own revisions",
+        )
+
+    if revision.status == "invalidated" or revision.approval_status == "invalidated":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Revision has been invalidated by a newer edit and cannot be approved",
+        )
+
+    if payload.content_hash != revision.content_hash:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Content hash mismatch: expected '{revision.content_hash}', "
+                f"got '{payload.content_hash}'"
+            ),
+        )
+
+    existing_approval = (
+        db.query(Approval)
+        .filter(
+            Approval.tenant_id == tenant_id,
+            Approval.revision_id == revision.id,
+            Approval.approver_id == current_user.id,
+            Approval.content_hash == payload.content_hash,
+        )
+        .first()
+    )
+    if existing_approval:
+        return ApprovalResponse(
+            id=existing_approval.id,
+            revision_id=existing_approval.revision_id,
+            approver_id=existing_approval.approver_id,
+            content_hash=existing_approval.content_hash,
+            revision_status=revision.status,
+            approval_status=revision.approval_status,
+            approved_at=existing_approval.approved_at,
+            idempotent=True,
+        )
+
+    findings = (
+        db.query(FindingModel)
+        .filter(
+            FindingModel.revision_id == revision.id,
+            FindingModel.tenant_id == tenant_id,
+        )
+        .all()
+    )
+
+    has_claim_finding = any(f.type.lower() in CLAIM_FINDING_TYPES for f in findings)
+    if has_claim_finding and current_user.role != "legal_reviewer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mandatory legal_reviewer sign-off is required when claim findings exist on this revision",
+        )
+
+    open_findings = [f for f in findings if f.status == "open"]
+    if open_findings:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot approve revision while {len(open_findings)} finding(s) remain open",
+        )
+
+    approval_id = f"apr_{uuid.uuid4().hex[:8]}"
+    approval = Approval(
+        id=approval_id,
+        tenant_id=tenant_id,
+        revision_id=revision.id,
+        approver_id=current_user.id,
+        content_hash=payload.content_hash,
+    )
+    db.add(approval)
+    revision.status = "approved"
+    revision.approval_status = "approved"
+
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="revision",
+        entity_id=revision.id,
+        action="revision.approved",
+        payload={
+            "approval_id": approval_id,
+            "approver_id": current_user.id,
+            "approver_role": current_user.role,
+            "content_hash": payload.content_hash,
+            "comment": payload.comment,
+            "has_claim_finding": has_claim_finding,
+        },
+    )
+    db.commit()
+
+    return ApprovalResponse(
+        id=approval.id,
+        revision_id=approval.revision_id,
+        approver_id=approval.approver_id,
+        content_hash=approval.content_hash,
+        revision_status=revision.status,
+        approval_status=revision.approval_status,
+        approved_at=approval.approved_at,
+        idempotent=False,
+    )
+
+
+def _edit_revision_impl(
+    revision_id: str,
+    payload: EditRevisionRequest,
+    current_user: User,
+    db: Session,
+) -> EditRevisionResponse:
+    tenant_id = current_user.tenant_id
+    revision = (
+        db.query(Revision)
+        .filter(Revision.id == revision_id, Revision.tenant_id == tenant_id)
+        .first()
+    )
+    if not revision:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Revision '{revision_id}' not found",
+        )
+
+    latest_rev = (
+        db.query(Revision)
+        .filter(Revision.content_id == revision.content_id, Revision.tenant_id == tenant_id)
+        .order_by(Revision.version_num.desc())
+        .first()
+    )
+    next_ver = (latest_rev.version_num + 1) if latest_rev else (revision.version_num + 1)
+
+    was_approved = bool(
+        revision.approval_status == "approved"
+        or revision.status == "approved"
+        or (
+            latest_rev is not None
+            and (latest_rev.approval_status == "approved" or latest_rev.status == "approved")
+        )
+    )
+    new_status = INVALIDATED_NEW_STATUS if was_approved else "draft"
+    new_hash = hashlib.sha256(payload.raw_text.encode("utf-8")).hexdigest()
+    new_rev_id = f"rev_{uuid.uuid4().hex[:8]}"
+
+    new_revision = Revision(
+        id=new_rev_id,
+        tenant_id=tenant_id,
+        content_id=revision.content_id,
+        version_num=next_ver,
+        content_hash=new_hash,
+        raw_text=payload.raw_text,
+        created_by=current_user.id,
+        status=new_status,
+        approval_status="pending",
+    )
+    db.add(new_revision)
+
+    if was_approved:
+        for prior in [revision, latest_rev]:
+            if prior is not None and (
+                prior.approval_status == "approved" or prior.status == "approved"
+            ):
+                prior.status = "invalidated"
+                prior.approval_status = "invalidated"
+                append_audit_log(
+                    db=db,
+                    tenant_id=tenant_id,
+                    entity_type="revision",
+                    entity_id=prior.id,
+                    action="revision.invalidated",
+                    payload={
+                        "content_id": revision.content_id,
+                        "superseded_by": new_rev_id,
+                        "previous_hash": prior.content_hash,
+                        "new_hash": new_hash,
+                        "actor_id": current_user.id,
+                    },
+                )
+
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="revision",
+        entity_id=new_rev_id,
+        action="revision.created",
+        payload={
+            "content_id": revision.content_id,
+            "edited_from_revision_id": revision.id,
+            "version_num": next_ver,
+            "content_hash": new_hash,
+            "status": new_status,
+            "created_by": current_user.id,
+            "comment": payload.comment,
+        },
+    )
+    db.commit()
+
+    return EditRevisionResponse(
+        id=new_revision.id,
+        content_id=new_revision.content_id,
+        version_num=new_revision.version_num,
+        content_hash=new_revision.content_hash,
+        raw_text=new_revision.raw_text,
+        created_by=new_revision.created_by,
+        status=new_revision.status,
+        approval_status=new_revision.approval_status,
+        previous_revision_id=revision.id,
+        previous_status=revision.status,
+        created_at=new_revision.created_at,
+    )
+
+
+@router.post(
+    "/{revision_id}/edit",
+    response_model=EditRevisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def edit_revision_post(
+    revision_id: str,
+    payload: EditRevisionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Creates a new revision from a text edit; invalidates any approved revision (Y-11)."""
+    return _edit_revision_impl(revision_id, payload, current_user, db)
+
+
+@router.patch(
+    "/{revision_id}",
+    response_model=EditRevisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def edit_revision_patch(
+    revision_id: str,
+    payload: EditRevisionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Creates a new revision via PATCH; invalidates any approved revision (Y-11)."""
+    return _edit_revision_impl(revision_id, payload, current_user, db)
+
+
+@router.post("/{revision_id}/request-changes", response_model=RequestChangesResponse)
+def request_changes_on_revision(
+    revision_id: str,
+    payload: RequestChangesPayload,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Transitions a revision to changes_requested with audit logging (Y-11)."""
+    if not payload.reason or not payload.reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="A non-empty reason is required when requesting changes",
+        )
+    if current_user.role not in APPROVER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Role '{current_user.role}' cannot request changes",
+        )
+
+    tenant_id = current_user.tenant_id
+    revision = (
+        db.query(Revision)
+        .filter(Revision.id == revision_id, Revision.tenant_id == tenant_id)
+        .first()
+    )
+    if not revision:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Revision '{revision_id}' not found",
+        )
+
+    revision.status = "changes_requested"
+    revision.approval_status = "changes_requested"
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="revision",
+        entity_id=revision.id,
+        action="revision.changes_requested",
+        payload={
+            "requested_by": current_user.id,
+            "reason": payload.reason.strip(),
+            "comment": payload.comment,
+        },
+    )
+    db.commit()
+
+    return RequestChangesResponse(
+        revision_id=revision.id,
+        status=revision.status,
+        approval_status=revision.approval_status,
+        requested_by=current_user.id,
+        reason=payload.reason.strip(),
+    )

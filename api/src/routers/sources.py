@@ -9,6 +9,7 @@ from api.src.auth.dependencies import get_current_user, get_db, require_admin
 from api.src.models.source import Source, SourceVersion
 from api.src.models.tenant import Tenant
 from api.src.models.user import User
+from api.src.services.governance import append_audit_log
 from contracts import SourceVersion as SourceVersionContract, compile
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -203,6 +204,19 @@ def create_or_version_source(
     )
     db.add(source_version)
     _bump_ruleset_version(db, tenant_id)
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="source",
+        entity_id=payload.source_id,
+        action="source.version_created",
+        payload={
+            "version": version_num,
+            "kind": source.kind,
+            "content_hash": content_hash,
+            "actor_id": current_user.id,
+        },
+    )
     db.commit()
 
     all_versions = (
@@ -362,6 +376,19 @@ def create_source_version(
     )
     db.add(source_version)
     _bump_ruleset_version(db, tenant_id)
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="source",
+        entity_id=source_id,
+        action="source.version_created",
+        payload={
+            "version": new_version_num,
+            "kind": source.kind,
+            "content_hash": content_hash,
+            "actor_id": current_user.id,
+        },
+    )
     db.commit()
 
     all_versions = (

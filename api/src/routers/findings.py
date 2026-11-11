@@ -2,13 +2,14 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from api.src.auth.dependencies import get_current_user, get_db
 from api.src.models.review import FindingDecision, FindingModel
 from api.src.models.user import User
+from api.src.services.governance import append_audit_log
 
 router = APIRouter(prefix="/findings", tags=["findings"])
 
@@ -112,6 +113,21 @@ def record_finding_decision(
         reason=payload.reason.strip() if payload.reason else None,
     )
     db.add(decision)
+    append_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        entity_type="finding",
+        entity_id=finding_id,
+        action=f"finding.{action_lower}",
+        payload={
+            "decision_id": decision_id,
+            "revision_id": finding.revision_id,
+            "user_id": current_user.id,
+            "action": action_lower,
+            "reason": decision.reason,
+            "new_status": new_status,
+        },
+    )
     db.commit()
 
     return DecisionResponse(
@@ -123,6 +139,42 @@ def record_finding_decision(
         finding_status=finding.status,
         created_at=decision.created_at,
     )
+
+
+@router.get("/queue")
+def get_finding_queue(
+    role: Optional[str] = None,
+    finding_status: Optional[str] = Query(None, alias="status"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns findings routed to a reviewer role queue (Y-12)."""
+    tenant_id = current_user.tenant_id
+    target_role = (role or current_user.role).strip()
+    query = db.query(FindingModel).filter(
+        FindingModel.tenant_id == tenant_id,
+        FindingModel.route_to == target_role,
+    )
+    if finding_status:
+        query = query.filter(FindingModel.status == finding_status)
+
+    findings = query.order_by(FindingModel.created_at.desc()).all()
+    return [
+        {
+            "finding_id": f.finding_id,
+            "revision_id": f.revision_id,
+            "run_id": f.run_id,
+            "type": f.type,
+            "severity": f.severity,
+            "confidence": f.confidence,
+            "explanation": f.explanation,
+            "route_to": f.route_to,
+            "status": f.status,
+            "abstained": f.abstained,
+            "created_at": f.created_at,
+        }
+        for f in findings
+    ]
 
 
 @router.get("/{finding_id}")
@@ -156,6 +208,7 @@ def get_finding(
         "confidence": finding.confidence,
         "span": finding.span_json,
         "explanation": finding.explanation,
+        "route_to": finding.route_to,
         "status": finding.status,
         "decisions": [
             {

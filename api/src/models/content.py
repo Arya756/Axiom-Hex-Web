@@ -46,6 +46,9 @@ class Revision(Base):
     version_num: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     raw_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_by: Mapped[Optional[str]] = mapped_column(
+        String(64), ForeignKey("users.id"), nullable=True
+    )
     status: Mapped[str] = mapped_column(
         String(64),
         default="draft",

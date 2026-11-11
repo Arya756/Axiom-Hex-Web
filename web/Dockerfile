@@ -2,9 +2,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY web/package.json ./
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ ./
+RUN npm run build
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "echo 'Next.js frontend placeholder service running' && tail -f /dev/null"]
-
+CMD ["npm", "run", "start"]

@@ -14,6 +14,7 @@ interface FindingCardProps {
   finding: Finding;
   isSelected?: boolean;
   onSelect?: (finding: Finding) => void;
+  onNavigate?: (direction: "next" | "prev") => void;
   onDecision?: (findingId: string, decision: FindingDecision, reason?: string) => void;
   onEditFix?: (findingId: string, editedText: string) => void;
 }
@@ -22,6 +23,7 @@ export function FindingCard({
   finding,
   isSelected,
   onSelect,
+  onNavigate,
   onDecision,
   onEditFix,
 }: FindingCardProps) {
@@ -74,12 +76,21 @@ export function FindingCard({
     <article
       tabIndex={0}
       role="region"
+      data-finding-id={finding.finding_id}
       aria-label={`Finding ${finding.finding_id}: ${finding.type}`}
+      aria-current={isSelected ? "true" : undefined}
       onClick={() => onSelect && onSelect(finding)}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onSelect && onSelect(finding);
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault();
+          onNavigate && onNavigate("next");
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          onNavigate && onNavigate("prev");
         }
       }}
       className={`rounded-2xl border transition-all duration-150 p-4 sm:p-5 space-y-3.5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
@@ -191,16 +202,24 @@ export function FindingCard({
       {/* 5. Tracked-Change Fix Diff (jsdiff) - Clean inline flow without jagged word cutoffs */}
       {finding.suggested_fix && (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3.5 space-y-2.5 text-xs">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-indigo-600" />
               Suggested Tracked-Change Fix
             </span>
-            {finding.suggested_fix.intent_similarity && (
-              <span className="text-xs text-indigo-800 font-mono font-semibold bg-indigo-100/80 px-2 py-0.5 rounded border border-indigo-200">
-                Intent similarity: {Math.round(finding.suggested_fix.intent_similarity * 100)}%
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(finding.disclosure.assisted || finding.disclosure.method === "llm_assisted") && (
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                  <Bot className="w-3 h-3" aria-hidden="true" />
+                  Assisted Fix
+                </span>
+              )}
+              {finding.suggested_fix.intent_similarity && (
+                <span className="text-xs text-indigo-800 font-mono font-semibold bg-indigo-100/80 px-2 py-0.5 rounded border border-indigo-200">
+                  Intent similarity: {Math.round(finding.suggested_fix.intent_similarity * 100)}%
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Natural inline diff layout */}
@@ -317,7 +336,7 @@ export function FindingCard({
                 e.stopPropagation();
                 setIsEditingFix(true);
               }}
-              className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 shadow-sm transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
             >
               Edit Fix
             </button>
@@ -330,7 +349,7 @@ export function FindingCard({
                 e.stopPropagation();
                 setIsDisputing(true);
               }}
-              className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100/80 rounded-lg border border-rose-200 transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100/80 rounded-lg border border-rose-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1"
             >
               Dispute
             </button>
@@ -342,7 +361,7 @@ export function FindingCard({
               e.stopPropagation();
               handleAccept();
             }}
-            className="px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg shadow-sm shadow-emerald-200 flex items-center gap-1.5 transition-colors"
+            className="px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg shadow-sm shadow-emerald-200 flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-1"
           >
             <CheckCircle className="w-3.5 h-3.5" />
             Accept Fix

@@ -188,6 +188,17 @@ export function ReviewerQueue({
         <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">Pending Approvals</h3>
 
         <div className="divide-y divide-slate-100">
+          {revisions.length === 0 && (
+            <div
+              role="status"
+              className="py-8 px-4 text-center rounded-xl bg-slate-50/70 border border-dashed border-slate-200 space-y-1.5"
+            >
+              <p className="text-sm font-semibold text-slate-800">No revisions pending approval</p>
+              <p className="text-xs text-slate-500">
+                Upload a draft in the Workspace tab to trigger automated checks and route findings for sign-off.
+              </p>
+            </div>
+          )}
           {revisions.map((rev) => (
             <div key={rev.id} className="py-4 flex items-center justify-between gap-4 flex-wrap">
               <div className="space-y-1">

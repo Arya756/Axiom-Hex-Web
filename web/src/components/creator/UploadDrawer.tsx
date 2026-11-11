@@ -11,10 +11,27 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sensitivity, setSensitivity] = useState<SensitivityLevel>("internal");
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const allowedExtensions = [".md", ".txt", ".pdf", ".docx", ".png", ".jpg", ".jpeg"];
+
+  const selectValidatedFile = (file: File) => {
+    const lower = file.name.toLowerCase();
+    const isAllowed = allowedExtensions.some((ext) => lower.endsWith(ext));
+    if (!isAllowed) {
+      setUploadError(
+        `Unsupported file type for "${file.name}". Allowed formats: ${allowedExtensions.join(", ")}.`
+      );
+      setSelectedFile(null);
+      return;
+    }
+    setUploadError(null);
+    setSelectedFile(file);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      selectValidatedFile(e.target.files[0]);
     }
   };
 
@@ -22,13 +39,17 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      selectValidatedFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleTriggerUpload = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      setUploadError("Please select a supported draft file before starting the pre-check.");
+      return;
+    }
+    setUploadError(null);
     onUploadSuccess(selectedFile, sensitivity);
   };
 
@@ -173,6 +194,17 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
           </div>
         </div>
 
+        {/* Explicit Error State Alert */}
+        {uploadError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-200 bg-rose-50/90 px-3.5 py-2.5 text-xs text-rose-900 flex items-center gap-2 shadow-2xs"
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" aria-hidden="true" />
+            <span className="font-medium">{uploadError}</span>
+          </div>
+        )}
+
         {/* Submit */}
         <button
           type="submit"
@@ -236,6 +268,15 @@ export function UploadDrawer({ onUploadSuccess, runProgress }: UploadDrawerProps
               {runProgress.cached && " (Cache hit)"}
             </span>
           </div>
+          {runProgress.status === "failed" && (
+            <div
+              role="alert"
+              className="mt-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900 flex items-center gap-2"
+            >
+              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" aria-hidden="true" />
+              <span>Pre-check run failed or encountered an unreadable input. Please check format and retry.</span>
+            </div>
+          )}
         </div>
       )}
     </div>

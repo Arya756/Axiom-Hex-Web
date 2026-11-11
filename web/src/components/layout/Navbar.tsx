@@ -1,12 +1,14 @@
 import React from "react";
 import { UserRole } from "../../types";
-import { Sparkles, Compass, CheckSquare, BookOpen, ShieldCheck } from "lucide-react";
+import { Sparkles, Compass, CheckSquare, BookOpen, ShieldCheck, Radar, BarChart3 } from "lucide-react";
+
+export type AppTab = "workspace" | "admin" | "reviewer" | "radar" | "insights";
 
 interface NavbarProps {
   currentRole: UserRole;
   onRoleChange: (role: UserRole) => void;
-  activeTab: "workspace" | "admin" | "reviewer";
-  onTabChange: (tab: "workspace" | "admin" | "reviewer") => void;
+  activeTab: AppTab;
+  onTabChange: (tab: AppTab) => void;
 }
 
 export function Navbar({
@@ -85,6 +87,32 @@ export function Navbar({
           >
             <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
             Admin Brand Kit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange("radar")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
+              activeTab === "radar"
+                ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <Radar className="w-3.5 h-3.5 text-purple-500" />
+            Ambiguity Radar
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange("insights")}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
+              activeTab === "insights"
+                ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+            Recurring Insights
           </button>
         </nav>
 

@@ -1,15 +1,26 @@
 import React, { useState } from "react";
 import { Source } from "../../types";
-import { GitCommit, ChevronDown, ChevronRight, CheckCircle2, History } from "lucide-react";
+import { GitCommit, ChevronDown, ChevronRight, CheckCircle2, History, FileWarning, Plus } from "lucide-react";
 
 interface SourceListProps {
   sources: Source[];
   onSelectSource?: (source: Source) => void;
+  onCreateNewVersion?: (sourceId: string, body: string, value?: string, unit?: string) => void;
+  onCheckImpact?: (sourceId: string) => void;
 }
 
-export function SourceList({ sources, onSelectSource }: SourceListProps) {
+export function SourceList({
+  sources,
+  onSelectSource,
+  onCreateNewVersion,
+  onCheckImpact,
+}: SourceListProps) {
   const [filter, setFilter] = useState<string>("all");
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>("F-112");
+  const [editingVersionFor, setEditingVersionFor] = useState<string | null>(null);
+  const [newBody, setNewBody] = useState<string>("");
+  const [newValue, setNewValue] = useState<string>("");
+  const [newUnit, setNewUnit] = useState<string>("");
 
   const filteredSources = sources.filter((s) => (filter === "all" ? true : s.kind === filter));
 
@@ -95,15 +106,108 @@ export function SourceList({ sources, onSelectSource }: SourceListProps) {
               {/* Version History Drawer */}
               {isExpanded && (
                 <div className="p-5 pt-2 bg-slate-50/70 border-t border-slate-100 space-y-3.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <GitCommit className="w-4 h-4 text-indigo-600" />
                       Version History & Supersession Chain
                     </span>
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      Created: {new Date(source.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {onCheckImpact && (
+                        <button
+                          type="button"
+                          onClick={() => onCheckImpact(source.id)}
+                          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1"
+                        >
+                          <FileWarning className="w-3 h-3" />
+                          Check Impact
+                        </button>
+                      )}
+                      {onCreateNewVersion && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editingVersionFor === source.id) {
+                              setEditingVersionFor(null);
+                            } else {
+                              setEditingVersionFor(source.id);
+                              setNewBody(currentVersion?.body ?? "");
+                              setNewValue(currentVersion?.value ?? "");
+                              setNewUnit(currentVersion?.unit ?? "");
+                            }
+                          }}
+                          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Create New Version
+                        </button>
+                      )}
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Created: {new Date(source.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
+
+                  {editingVersionFor === source.id && onCreateNewVersion && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!newBody.trim()) return;
+                        onCreateNewVersion(
+                          source.id,
+                          newBody.trim(),
+                          newValue.trim() || undefined,
+                          newUnit.trim() || undefined
+                        );
+                        setEditingVersionFor(null);
+                      }}
+                      className="p-3.5 rounded-xl bg-white border border-indigo-200 space-y-2.5 shadow-sm"
+                    >
+                      <div className="text-xs font-bold text-indigo-900">
+                        Publish v{source.current_version + 1} for {source.id} (auto-checks impact)
+                      </div>
+                      <textarea
+                        aria-label={`New version statement for ${source.id}`}
+                        rows={2}
+                        value={newBody}
+                        onChange={(e) => setNewBody(e.target.value)}
+                        required
+                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:border-indigo-500 outline-none"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          aria-label={`New canonical value for ${source.id}`}
+                          placeholder="Canonical value (optional)"
+                          value={newValue}
+                          onChange={(e) => setNewValue(e.target.value)}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900"
+                        />
+                        <input
+                          type="text"
+                          aria-label={`New unit for ${source.id}`}
+                          placeholder="Unit (optional)"
+                          value={newUnit}
+                          onChange={(e) => setNewUnit(e.target.value)}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingVersionFor(null)}
+                          className="text-xs px-3 py-1 rounded-lg bg-slate-100 text-slate-600 font-semibold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="text-xs px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm"
+                        >
+                          Publish v{source.current_version + 1} & Check Impact
+                        </button>
+                      </div>
+                    </form>
+                  )}
 
                   <div className="space-y-2.5">
                     {source.versions.map((ver) => {

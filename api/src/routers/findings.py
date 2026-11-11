@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from api.src.auth.dependencies import get_current_user, get_db
 from api.src.models.review import FindingDecision, FindingModel
 from api.src.models.user import User
+from api.src.services.analytics import sync_rule_stat_for_decision
 from api.src.services.governance import append_audit_log
 
 router = APIRouter(prefix="/findings", tags=["findings"])
@@ -113,6 +114,7 @@ def record_finding_decision(
         reason=payload.reason.strip() if payload.reason else None,
     )
     db.add(decision)
+    sync_rule_stat_for_decision(db, tenant_id, finding, action_lower)
     append_audit_log(
         db=db,
         tenant_id=tenant_id,

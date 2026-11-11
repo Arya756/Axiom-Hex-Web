@@ -1,28 +1,47 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserRole, Finding, Source, ContentUnit, IntentCard, Revision, SensitivityLevel, ReviewRunProgress, FindingDecision } from "../types";
+import {
+  UserRole,
+  Finding,
+  Source,
+  ContentUnit,
+  IntentCard,
+  Revision,
+  SensitivityLevel,
+  ReviewRunProgress,
+  FindingDecision,
+  RadarData,
+  ImpactAnalysisData,
+  RecurringInsightsData,
+} from "../types";
 import {
   SEEDED_SOURCES,
   SEEDED_FINDINGS,
   SEEDED_CONTENT_UNITS,
   INITIAL_INTENT_CARD,
   SEEDED_REVISION,
+  SEEDED_RADAR_DATA,
+  SEEDED_IMPACT_MAP,
+  SEEDED_RECURRING_INSIGHTS,
 } from "../lib/mockData";
-import { Navbar } from "../components/layout/Navbar";
+import { Navbar, AppTab } from "../components/layout/Navbar";
 import { AxeDisclosure } from "../components/common/AxeDisclosure";
 import { SourceList } from "../components/admin/SourceList";
 import { SourceForm } from "../components/admin/SourceForm";
+import { AffectedContentPanel } from "../components/admin/AffectedContentPanel";
 import { UploadDrawer } from "../components/creator/UploadDrawer";
 import { IntentCardDrawer } from "../components/creator/IntentCardDrawer";
 import { FindingCard } from "../components/findings/FindingCard";
 import { DocumentViewer } from "../components/viewer/DocumentViewer";
 import { ReviewerQueue } from "../components/reviewer/ReviewerQueue";
+import { AmbiguityRadar } from "../components/insights/AmbiguityRadar";
+import { RecurringInsightsDashboard } from "../components/insights/RecurringInsightsDashboard";
 import { CheckCircle2, Sparkles, Info, UploadCloud, Compass, ChevronDown, ChevronUp, FileText } from "lucide-react";
 
 export default function Home() {
   const [currentRole, setCurrentRole] = useState<UserRole>("creator");
-  const [activeTab, setActiveTab] = useState<"workspace" | "admin" | "reviewer">("workspace");
+  const [activeTab, setActiveTab] = useState<AppTab>("workspace");
 
   // State
   const [sources, setSources] = useState<Source[]>(SEEDED_SOURCES);
@@ -34,6 +53,9 @@ export default function Home() {
   const [runProgress, setRunProgress] = useState<ReviewRunProgress | null>(null);
   const [findingFilter, setFindingFilter] = useState<string>("all");
   const [statusBanner, setStatusBanner] = useState<{ message: string; type: "success" | "info" } | null>(null);
+  const [radarData] = useState<RadarData>(SEEDED_RADAR_DATA);
+  const [recurringInsights] = useState<RecurringInsightsData>(SEEDED_RECURRING_INSIGHTS);
+  const [activeImpact, setActiveImpact] = useState<ImpactAnalysisData | null>(null);
 
   // Workspace panel toggles (clean, space-efficient control)
   const [showUploadPanel, setShowUploadPanel] = useState<boolean>(false);
@@ -204,6 +226,89 @@ export default function Home() {
 
   const handleOverrideFinding = (findingId: string, reason: string) => {
     handleDecision(findingId, "override", reason);
+  };
+
+  const handleInspectImpact = (sourceId: string) => {
+    const matchedSource = sources.find((s) => s.id === sourceId);
+    const presetImpact = SEEDED_IMPACT_MAP[sourceId];
+    if (presetImpact) {
+      setActiveImpact({
+        ...presetImpact,
+        source_name: matchedSource?.name ?? presetImpact.source_name,
+        current_version: matchedSource?.current_version ?? presetImpact.current_version,
+      });
+    } else {
+      setActiveImpact({
+        source_id: sourceId,
+        source_name: matchedSource?.name ?? sourceId,
+        source_kind: matchedSource?.kind,
+        current_version: matchedSource?.current_version ?? 1,
+        affected_count: 0,
+        affected_items: [],
+      });
+    }
+    setActiveTab("admin");
+  };
+
+  const handleCreateNewSourceVersion = (
+    sourceId: string,
+    body: string,
+    value?: string,
+    unit?: string
+  ) => {
+    const nowIso = new Date().toISOString();
+    let updatedVer = 1;
+    setSources((prev) =>
+      prev.map((src) => {
+        if (src.id !== sourceId) return src;
+        updatedVer = src.current_version + 1;
+        const updatedVersions = src.versions.map((v) =>
+          v.version === src.current_version
+            ? { ...v, valid_until: nowIso, superseded_by: updatedVer }
+            : v
+        );
+        return {
+          ...src,
+          current_version: updatedVer,
+          versions: [
+            ...updatedVersions,
+            {
+              version: updatedVer,
+              content_hash: "sha256_" + Math.random().toString(36).substring(2, 10),
+              body,
+              value,
+              unit,
+              valid_from: nowIso,
+              valid_until: null,
+              superseded_by: null,
+              created_at: nowIso,
+            },
+          ],
+        };
+      })
+    );
+    const matched = sources.find((s) => s.id === sourceId);
+    const presetImpact = SEEDED_IMPACT_MAP[sourceId];
+    setActiveImpact(
+      presetImpact
+        ? {
+            ...presetImpact,
+            source_name: matched?.name ?? presetImpact.source_name,
+            current_version: (matched?.current_version ?? 1) + 1,
+          }
+        : {
+            source_id: sourceId,
+            source_name: matched?.name ?? sourceId,
+            source_kind: matched?.kind,
+            current_version: (matched?.current_version ?? 1) + 1,
+            affected_count: 0,
+            affected_items: [],
+          }
+    );
+    setStatusBanner({
+      message: `Published v${(matched?.current_version ?? 1) + 1} for ${sourceId}. Impact analysis loaded for affected draft/in-review items.`,
+      type: "success",
+    });
   };
 
   const currentRevision = revisions[0] || SEEDED_REVISION;
@@ -429,23 +534,54 @@ export default function Home() {
 
         {/* TAB 3: ADMIN SOURCES & BRAND KIT COMPILER */}
         {activeTab === "admin" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            <div className="lg:col-span-5 space-y-4">
-              <SourceForm
-                onAddSource={(newSource) => setSources((prev) => [newSource, ...prev])}
-                onImportKit={(count) => {
+          <div className="space-y-5">
+            {activeImpact && (
+              <AffectedContentPanel
+                impact={activeImpact}
+                onClose={() => setActiveImpact(null)}
+                onRecheckItem={(revId, title) => {
                   setStatusBanner({
-                    message: `Imported and compiled ${count} sources into Brand Kit.`,
-                    type: "success",
+                    message: `Queued background re-check run for "${title}" (${revId}).`,
+                    type: "info",
                   });
                 }}
               />
-            </div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="lg:col-span-5 space-y-4">
+                <SourceForm
+                  onAddSource={(newSource) => {
+                    setSources((prev) => [newSource, ...prev]);
+                    handleInspectImpact(newSource.id);
+                  }}
+                  onImportKit={(count) => {
+                    setStatusBanner({
+                      message: `Imported and compiled ${count} sources into Brand Kit.`,
+                      type: "success",
+                    });
+                  }}
+                />
+              </div>
 
-            <div className="lg:col-span-7 space-y-4">
-              <SourceList sources={sources} />
+              <div className="lg:col-span-7 space-y-4">
+                <SourceList
+                  sources={sources}
+                  onCreateNewVersion={handleCreateNewSourceVersion}
+                  onCheckImpact={handleInspectImpact}
+                />
+              </div>
             </div>
           </div>
+        )}
+
+        {/* TAB 4: GUIDELINE AMBIGUITY RADAR (Y-21, Y-24, I3) */}
+        {activeTab === "radar" && (
+          <AmbiguityRadar data={radarData} onInspectImpact={handleInspectImpact} />
+        )}
+
+        {/* TAB 5: RECURRING INSIGHTS DASHBOARD (Y-23) */}
+        {activeTab === "insights" && (
+          <RecurringInsightsDashboard data={recurringInsights} />
         )}
       </main>
     </div>

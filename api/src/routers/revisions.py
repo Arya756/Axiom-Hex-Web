@@ -15,6 +15,7 @@ from api.src.models.review import Comment, FindingModel, ReviewRun
 from api.src.models.tenant import Tenant
 from api.src.models.user import User
 from api.src.models.workflow import Approval
+from api.src.services.analytics import sync_rule_stat_for_finding
 from api.src.services.governance import (
     CLAIM_FINDING_TYPES,
     append_audit_log,
@@ -44,9 +45,21 @@ class IntentCardPayload(BaseModel):
     cta: Optional[str] = None
 
 
+class SyntheticSignalInput(BaseModel):
+    rule_id: str
+    type: str = "violation"
+    severity: str = "medium"
+    confidence: float = 0.90
+    abstained: bool = False
+    quote: str = ""
+    explanation: str = ""
+    matched_sources: List[str] = []
+
+
 class ReviewRunRequest(BaseModel):
     sensitivity: Optional[str] = None  # public, internal, restricted
     intent_card: Optional[IntentCardPayload] = None
+    synthetic_signals: Optional[List[SyntheticSignalInput]] = None
 
 
 class ReviewRunResponse(BaseModel):
@@ -186,6 +199,7 @@ def execute_review_run_task(
     ruleset_version: int,
     sensitivity_str: str,
     intent_card_dict: Optional[Dict[str, Any]],
+    synthetic_signals: Optional[List[Dict[str, Any]]] = None,
 ) -> None:
     """Background task executing the multimodal pre-check review run."""
     import api.src.database as db_module
@@ -234,29 +248,98 @@ def execute_review_run_task(
             )
 
             # 3. Only API writes workflow tables (T1 contract requirement)
-            for f in result.findings:
-                routed_role = route_finding_by_type(
-                    f.type.value, abstained=f.abstained
-                )
-                finding_model = FindingModel(
-                    finding_id=f.finding_id,
-                    tenant_id=tenant_id,
-                    revision_id=revision.id,
-                    run_id=run.id,
-                    type=f.type.value,
-                    severity=f.severity.value,
-                    confidence=f.confidence,
-                    span_json=f.span.model_dump(),
-                    evidence_json=[e.model_dump() for e in f.evidence],
-                    explanation=f.explanation,
-                    suggested_fix_json=f.suggested_fix.model_dump() if f.suggested_fix else None,
-                    route_to=routed_role,
-                    status=f.status.value,
-                    abstained=f.abstained,
-                    rule_id=f.rule_id,
-                    disclosure_json=f.disclosure.model_dump() if f.disclosure else None,
-                )
-                db.add(finding_model)
+            matched_sources_combined: List[str] = list(result.matched_sources or [])
+            persisted_findings_count = 0
+
+            if synthetic_signals:
+                for sig in synthetic_signals:
+                    sig_type = str(sig.get("type", "violation"))
+                    sig_abstained = bool(sig.get("abstained", False))
+                    sig_conf = float(sig.get("confidence", 0.9))
+                    sig_rule_id = str(sig.get("rule_id", "R-01"))
+                    sig_quote = str(sig.get("quote") or text_content[:60])
+                    routed_role = route_finding_by_type(sig_type, abstained=sig_abstained)
+                    finding_model = FindingModel(
+                        finding_id=f"f_syn_{uuid.uuid4().hex[:8]}",
+                        tenant_id=tenant_id,
+                        revision_id=revision.id,
+                        run_id=run.id,
+                        type=sig_type,
+                        severity=str(sig.get("severity", "medium")),
+                        confidence=sig_conf,
+                        span_json={
+                            "unit_id": f"u_{revision.id}_1",
+                            "start": 0,
+                            "end": min(len(text_content), max(1, len(sig_quote))),
+                            "quote": sig_quote,
+                        },
+                        evidence_json=[
+                            {
+                                "source": sig_rule_id,
+                                "version": 1,
+                                "status": "active",
+                            }
+                        ],
+                        explanation=str(
+                            sig.get("explanation")
+                            or f"Synthetic calibration finding for rule {sig_rule_id}."
+                        ),
+                        suggested_fix_json=None,
+                        route_to=routed_role,
+                        status="open",
+                        abstained=sig_abstained,
+                        rule_id=sig_rule_id,
+                        disclosure_json={
+                            "method": "deterministic_lookup",
+                            "external_call": False,
+                            "sensitivity": effective_sensitivity,
+                            "synthetic": True,
+                        },
+                    )
+                    db.add(finding_model)
+                    sync_rule_stat_for_finding(
+                        db=db,
+                        tenant_id=tenant_id,
+                        rule_id=sig_rule_id,
+                        confidence=sig_conf,
+                        abstained=sig_abstained,
+                    )
+                    persisted_findings_count += 1
+                    for ms in sig.get("matched_sources") or [sig_rule_id]:
+                        if ms not in matched_sources_combined:
+                            matched_sources_combined.append(ms)
+            else:
+                for f in result.findings:
+                    routed_role = route_finding_by_type(
+                        f.type.value, abstained=f.abstained
+                    )
+                    finding_model = FindingModel(
+                        finding_id=f.finding_id,
+                        tenant_id=tenant_id,
+                        revision_id=revision.id,
+                        run_id=run.id,
+                        type=f.type.value,
+                        severity=f.severity.value,
+                        confidence=f.confidence,
+                        span_json=f.span.model_dump(),
+                        evidence_json=[e.model_dump() for e in f.evidence],
+                        explanation=f.explanation,
+                        suggested_fix_json=f.suggested_fix.model_dump() if f.suggested_fix else None,
+                        route_to=routed_role,
+                        status=f.status.value,
+                        abstained=f.abstained,
+                        rule_id=f.rule_id,
+                        disclosure_json=f.disclosure.model_dump() if f.disclosure else None,
+                    )
+                    db.add(finding_model)
+                    sync_rule_stat_for_finding(
+                        db=db,
+                        tenant_id=tenant_id,
+                        rule_id=f.rule_id,
+                        confidence=f.confidence,
+                        abstained=f.abstained,
+                    )
+                    persisted_findings_count += 1
 
             record_usage_entries(
                 db=db,
@@ -269,7 +352,7 @@ def execute_review_run_task(
 
             run.status = "partial" if result.partial else "done"
             run.partial = result.partial
-            run.matched_sources = result.matched_sources
+            run.matched_sources = matched_sources_combined
             run.run_progress = [p.model_dump(mode="json") for p in result.run_progress]
             run.finished_at = datetime.now(timezone.utc)
             revision.status = "in_review"
@@ -283,7 +366,8 @@ def execute_review_run_task(
                     "revision_id": revision.id,
                     "sensitivity": effective_sensitivity,
                     "partial": result.partial,
-                    "findings_count": len(result.findings),
+                    "findings_count": persisted_findings_count,
+                    "synthetic": bool(synthetic_signals),
                 },
             )
             db.commit()
@@ -337,18 +421,20 @@ def trigger_review_run(
         intent_card=payload.intent_card,
     )
 
-    # Cache lookup
-    cached_run = (
-        db.query(ReviewRun)
-        .filter(
-            ReviewRun.tenant_id == tenant_id,
-            ReviewRun.revision_id == revision.id,
-            ReviewRun.cache_key == cache_key,
-            ReviewRun.status.in_(["done", "partial"]),
+    # Cache lookup (skip cache when explicit synthetic calibration signals are supplied)
+    cached_run = None
+    if not payload.synthetic_signals:
+        cached_run = (
+            db.query(ReviewRun)
+            .filter(
+                ReviewRun.tenant_id == tenant_id,
+                ReviewRun.revision_id == revision.id,
+                ReviewRun.cache_key == cache_key,
+                ReviewRun.status.in_(["done", "partial"]),
+            )
+            .order_by(ReviewRun.started_at.desc())
+            .first()
         )
-        .order_by(ReviewRun.started_at.desc())
-        .first()
-    )
     if cached_run:
         return ReviewRunResponse(
             id=cached_run.id,
@@ -382,6 +468,11 @@ def trigger_review_run(
     db.commit()
 
     card_dict = payload.intent_card.model_dump() if payload.intent_card else None
+    syn_dicts = (
+        [s.model_dump() for s in payload.synthetic_signals]
+        if payload.synthetic_signals
+        else None
+    )
     background_tasks.add_task(
         execute_review_run_task,
         run_id=run_id,
@@ -390,6 +481,7 @@ def trigger_review_run(
         ruleset_version=ruleset_version,
         sensitivity_str=sensitivity,
         intent_card_dict=card_dict,
+        synthetic_signals=syn_dicts,
     )
 
     return ReviewRunResponse(

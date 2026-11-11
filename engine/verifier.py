@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Set, Tuple
 
-from brand_kit.fixtures import FACTS, GLOSSARY, RULES
+from brand_kit.fixtures import FACTS, GLOSSARY, PALETTE, RULES
 from contracts.models import ContentUnit, Finding, FindingType, Method
 
 
@@ -34,6 +34,7 @@ class CitationVerifier:
             self.valid_source_ids.update(r.rule_id for r in RULES)
             self.valid_source_ids.update(g.term_id for g in GLOSSARY)
             self.valid_source_ids.update(f.fact_id for f in FACTS)
+            self.valid_source_ids.update(f"P-{c.name.replace(' ', '_').upper()}" for c in PALETTE)
 
         if valid_source_versions is not None:
             self.valid_source_versions = valid_source_versions
@@ -46,6 +47,8 @@ class CitationVerifier:
             for f in FACTS:
                 for v in f.versions:
                     self.valid_source_versions.add((f.fact_id, v.version))
+            for c in PALETTE:
+                self.valid_source_versions.add((f"P-{c.name.replace(' ', '_').upper()}", 1))
 
     def verify_finding(
         self,

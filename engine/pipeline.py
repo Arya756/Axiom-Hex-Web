@@ -1,15 +1,17 @@
-"""LangGraph / Async review pipeline for Axiom (PRD §4.3 A-05, A-08, A-09, A-11, T1).
+"""LangGraph / Async review pipeline for Axiom (PRD §4.3 A-05, A-08..A-12, T1).
 
 Orchestrates multimodal review checks with:
 - State schema (ReviewState)
 - Sensitivity policy router (hard-blocks external calls on Restricted content)
 - Parallel fan-out over checkers:
-  * Deterministic TerminologyChecker (banned terms, product casing)
-  * TemporalFactLedger (stale claim extraction, normalisation, Outdated/Contradicted/Supported/Unsupported)
-  * LLMClient (tone, intent)
-- CitationVerifier anti-hallucination gate (drops invalid citations, reports drop rate)
-- Graceful partial degradation (deterministic findings always survive upstream errors)
-- Real-time node progress events
+  * Deterministic TerminologyChecker (banned terms, product casing)        — A-08
+  * TemporalFactLedger (stale claim extraction, normalisation, classify)   — A-09
+  * HybridRetriever (BM25 + vector KNN + RRF, tenant-scoped, trace)       — A-10
+  * LLMClient (tone, intent, XML-sandboxed)                                — A-06
+- CitationVerifier anti-hallucination gate + trace enrichment              — A-11
+- AbstainRouter: route_to enforcement + Needs judgment tagging             — A-12
+- Graceful partial degradation (deterministic findings always survive)
+- Real-time node progress events (T6)
 """
 
 from __future__ import annotations
@@ -28,8 +30,10 @@ from contracts.models import (
     RunProgress,
     Sensitivity,
 )
+from engine.abstain import AbstainRouter
 from engine.fact_ledger import RetrievalFailureError, TemporalFactLedger
 from engine.llm_client import LLMClient
+from engine.retrieval import HybridRetriever, get_default_retriever
 from engine.terminology import TerminologyChecker
 from engine.verifier import CitationVerifier
 
@@ -43,6 +47,8 @@ class ReviewState:
         ruleset_version: int = 1,
         policy: Optional[Sensitivity] = None,
         intent_card: Optional[IntentCard] = None,
+        session: Any = None,
+        tenant_id: str = "tenant_meridian",
         simulate_llm_failure: bool = False,
         simulate_retrieval_failure: bool = False,
     ) -> None:
@@ -51,6 +57,8 @@ class ReviewState:
         self.ruleset_version = ruleset_version
         self.policy = policy or Sensitivity.internal
         self.intent_card = intent_card
+        self.session = session
+        self.tenant_id = tenant_id
         self.simulate_llm_failure = simulate_llm_failure
         self.simulate_retrieval_failure = simulate_retrieval_failure
 
@@ -59,8 +67,13 @@ class ReviewState:
         self.run_progress: List[RunProgress] = []
         self.disclosures: List[DisclosureRecord] = []
         self.partial: bool = False
+
+        # Verifier metrics
         self.verifier_dropped_count: int = 0
         self.verifier_drop_rate: float = 0.0
+
+        # Retrieval traces — quote -> trace summary string (for Unsupported receipts)
+        self.retrieval_traces: Dict[str, str] = {}
 
     def add_progress(
         self,
@@ -74,7 +87,9 @@ class ReviewState:
                 node=node,
                 status=status,
                 started_at=started_at or datetime.utcnow(),
-                finished_at=datetime.utcnow() if status in (RunNodeStatus.done, RunNodeStatus.failed, RunNodeStatus.partial) else None,
+                finished_at=datetime.utcnow() if status in (
+                    RunNodeStatus.done, RunNodeStatus.failed, RunNodeStatus.partial
+                ) else None,
                 error=error,
             )
         )
@@ -88,31 +103,46 @@ class ReviewPipeline:
         llm_client: Optional[LLMClient] = None,
         terminology_checker: Optional[TerminologyChecker] = None,
         fact_ledger: Optional[TemporalFactLedger] = None,
+        retriever: Optional[HybridRetriever] = None,
         verifier: Optional[CitationVerifier] = None,
+        abstain_router: Optional[AbstainRouter] = None,
     ) -> None:
         self.llm_client = llm_client or LLMClient()
         self.terminology_checker = terminology_checker or TerminologyChecker()
         self.fact_ledger = fact_ledger or TemporalFactLedger()
+        self.retriever = retriever  # None = lazy-loaded from default
         self.verifier = verifier or CitationVerifier()
+        self.abstain_router = abstain_router or AbstainRouter()
+
+    def _get_retriever(self) -> HybridRetriever:
+        if self.retriever is not None:
+            return self.retriever
+        return get_default_retriever()
 
     def run(self, state: ReviewState) -> ReviewResult:
         """Execute review DAG across checkers and verifier."""
-        # 1. Router Node: Enforce sensitivity policy
+        # 1. Router — enforce sensitivity policy
         self._node_router(state)
 
-        # 2. Deterministic Terminology Node (PRD §4.3 A-08)
+        # 2. Terminology checker (A-08)
         self._node_terminology(state)
 
-        # 3. Temporal Fact Ledger Node (PRD §4.3 A-09)
+        # 3. Temporal Fact Ledger (A-09)
         self._node_facts(state)
 
-        # 4. LLM Tone / Intent Node (PRD §4.3 A-06, A-16)
+        # 4. Hybrid Retrieval (A-10) — enrich Unsupported findings with traces
+        self._node_retrieval(state)
+
+        # 5. LLM Tone / Intent (A-06)
         self._node_llm(state)
 
-        # 5. Citation Verifier Node (PRD §4.3 A-11, I1.5)
+        # 6. Citation Verifier (A-11)
         self._node_verifier(state)
 
-        # 6. Aggregator Node
+        # 7. Abstain / route_to (A-12)
+        self._node_abstain(state)
+
+        # 8. Aggregator
         self._node_aggregator(state)
 
         return ReviewResult(
@@ -148,10 +178,9 @@ class ReviewPipeline:
             state.partial = True
 
     def _node_facts(self, state: ReviewState) -> None:
-        """Extract and verify factual claims against Temporal Fact Ledger (A-09)."""
+        """Extract and verify factual claims via Temporal Fact Ledger (A-09)."""
         node_start = datetime.utcnow()
         try:
-            # Configure ledger failure simulation if requested
             ledger = (
                 TemporalFactLedger(simulate_retrieval_failure=True)
                 if state.simulate_retrieval_failure
@@ -162,11 +191,44 @@ class ReviewPipeline:
             state.matched_sources.update(sources)
             state.add_progress("facts", RunNodeStatus.done, started_at=node_start)
         except RetrievalFailureError as rf_err:
-            # Guardrail: mark checker partial/failed; NEVER emit false Unsupported findings!
+            # Guardrail: mark partial/failed; NEVER emit false Unsupported findings!
             state.add_progress("facts", RunNodeStatus.failed, error=str(rf_err), started_at=node_start)
             state.partial = True
         except Exception as ex:
             state.add_progress("facts", RunNodeStatus.failed, error=str(ex), started_at=node_start)
+            state.partial = True
+
+    def _node_retrieval(self, state: ReviewState) -> None:
+        """Hybrid BM25 + vector KNN + RRF retrieval (A-10).
+
+        For each Unsupported finding, runs a tenant-scoped hybrid search and:
+        1. Populates state.retrieval_traces (quote -> trace summary).
+        2. Adds matched source IDs to state.matched_sources (I3.4).
+        """
+        node_start = datetime.utcnow()
+        try:
+            retriever = self._get_retriever()
+            unsupported_findings = [
+                f for f in state.findings
+                if f.type.value == "unsupported"
+            ]
+
+            for finding in unsupported_findings:
+                result = retriever.query(
+                    query_text=finding.span.quote,
+                    tenant_id=state.tenant_id,
+                    top_k=5,
+                    session=state.session,
+                )
+                # Store trace for verifier enrichment step
+                state.retrieval_traces[finding.span.quote] = result.trace_summary
+                # Record all matched sources for impact analysis (PRD I3.4)
+                for hit in result.hits:
+                    state.matched_sources.add(hit.source_id)
+
+            state.add_progress("retrieval", RunNodeStatus.done, started_at=node_start)
+        except Exception as ex:
+            state.add_progress("retrieval", RunNodeStatus.failed, error=str(ex), started_at=node_start)
             state.partial = True
 
     def _node_llm(self, state: ReviewState) -> None:
@@ -214,12 +276,19 @@ class ReviewPipeline:
             state.add_progress("tone_llm", RunNodeStatus.done, started_at=node_start)
 
     def _node_verifier(self, state: ReviewState) -> None:
-        """Citation Verifier node: drops unverified/hallucinated findings (A-11, I1.5)."""
+        """Citation Verifier node: drops unverified/hallucinated findings (A-11, G2).
+
+        Also enriches Unsupported findings with hybrid retrieval traces.
+        """
         node_start = datetime.utcnow()
         try:
             units_by_id = {u.unit_id: u for u in state.units}
             verified_findings, dropped_count, drop_rate = self.verifier.filter_findings(
                 state.findings, units_by_id
+            )
+            # G2: Embed retrieval trace into Unsupported explanations
+            verified_findings = self.verifier.enrich_unsupported_with_trace(
+                verified_findings, state.retrieval_traces
             )
             state.findings = verified_findings
             state.verifier_dropped_count = dropped_count
@@ -233,6 +302,34 @@ class ReviewPipeline:
             )
         except Exception as ex:
             state.add_progress("verifier", RunNodeStatus.failed, error=str(ex), started_at=node_start)
+            state.partial = True
+
+    def _node_abstain(self, state: ReviewState) -> None:
+        """Apply abstain rule and route_to enforcement (A-12).
+
+        - Tags ambiguous-rule findings with abstained=True (Needs judgment).
+        - Enforces correct route_to per finding type (R1 §2.5).
+        - Records every source matched (including Supported) for impact analysis (I3.4).
+        """
+        node_start = datetime.utcnow()
+        try:
+            from brand_kit.fixtures import RULES
+            from brand_kit.meridian_flow import RuleKind
+            ambiguous_rule_ids = {r.rule_id for r in RULES if r.kind == RuleKind.ambiguous}
+
+            # Tag findings that need human judgment
+            tagged = self.abstain_router.apply_needs_judgment(
+                state.findings, ambiguous_rule_ids
+            )
+            # Enforce route_to and collect all matched sources
+            processed, all_sources = self.abstain_router.process_findings(
+                tagged, state.matched_sources, ambiguous_rule_ids
+            )
+            state.findings = processed
+            state.matched_sources = all_sources
+            state.add_progress("abstain", RunNodeStatus.done, started_at=node_start)
+        except Exception as ex:
+            state.add_progress("abstain", RunNodeStatus.failed, error=str(ex), started_at=node_start)
             state.partial = True
 
     def _node_aggregator(self, state: ReviewState) -> None:
@@ -251,6 +348,7 @@ def run_review(
     session: Any = None,
     policy: Optional[Sensitivity] = None,
     intent_card: Optional[IntentCard] = None,
+    tenant_id: str = "tenant_meridian",
     simulate_llm_failure: bool = False,
     simulate_retrieval_failure: bool = False,
 ) -> ReviewResult:
@@ -260,6 +358,8 @@ def run_review(
         ruleset_version=ruleset_version,
         policy=policy,
         intent_card=intent_card,
+        session=session,
+        tenant_id=tenant_id,
         simulate_llm_failure=simulate_llm_failure,
         simulate_retrieval_failure=simulate_retrieval_failure,
     )
